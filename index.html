@@ -1,0 +1,1788 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>员工上岗证管理系统</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --bg-primary:#f0f2f7;
+  --bg-secondary:#ffffff;
+  --bg-tertiary:#f8f9fc;
+  --bg-card:#ffffff;
+  --text-primary:#1a1d2e;
+  --text-secondary:#5a6178;
+  --text-tertiary:#8b90a5;
+  --border:#e2e5f0;
+  --border-light:#eef0f6;
+  --accent:#3b5bdb;
+  --accent-light:#edf2ff;
+  --accent-hover:#2b4acb;
+  --danger:#e03131;
+  --danger-light:#fff0f0;
+  --warning:#f59f00;
+  --warning-light:#fff9e6;
+  --success:#2f9e44;
+  --success-light:#edfcf0;
+  --shadow-sm:0 1px 3px rgba(26,29,46,.06);
+  --shadow-md:0 4px 16px rgba(26,29,46,.08);
+  --shadow-lg:0 12px 40px rgba(26,29,46,.12);
+  --shadow-xl:0 20px 60px rgba(26,29,46,.16);
+  --radius:10px;
+  --radius-lg:14px;
+  --radius-xl:18px;
+  --header-h:64px;
+  --sidebar-w:0px;
+  --transition:all .25s cubic-bezier(.4,0,.2,1);
+}
+
+[data-theme="dark"]{
+  --bg-primary:#0f1117;
+  --bg-secondary:#1a1d2e;
+  --bg-tertiary:#222538;
+  --bg-card:#1e2132;
+  --text-primary:#e8eaf0;
+  --text-secondary:#a0a5bc;
+  --text-tertiary:#6b7194;
+  --border:#2a2e44;
+  --border-light:#242840;
+  --accent:#5c7cfa;
+  --accent-light:rgba(92,124,250,.12);
+  --accent-hover:#748ffc;
+  --danger:#ff6b6b;
+  --danger-light:rgba(255,107,107,.1);
+  --warning:#ffd43b;
+  --warning-light:rgba(255,212,59,.1);
+  --success:#69db7c;
+  --success-light:rgba(105,219,124,.1);
+  --shadow-sm:0 1px 3px rgba(0,0,0,.2);
+  --shadow-md:0 4px 16px rgba(0,0,0,.25);
+  --shadow-lg:0 12px 40px rgba(0,0,0,.35);
+  --shadow-xl:0 20px 60px rgba(0,0,0,.4);
+}
+
+html{font-size:14px;scroll-behavior:smooth}
+body{
+  font-family:'Noto Sans SC',system-ui,-apple-system,sans-serif;
+  background:var(--bg-primary);
+  color:var(--text-primary);
+  line-height:1.6;
+  min-height:100vh;
+  transition:background .3s,color .3s;
+  overflow-x:hidden;
+}
+
+/* ========== Header ========== */
+.header{
+  position:fixed;top:0;left:0;right:0;
+  height:var(--header-h);
+  background:var(--bg-secondary);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;
+  padding:0 28px;
+  z-index:100;
+  backdrop-filter:blur(12px);
+  transition:var(--transition);
+}
+.header-logo{
+  display:flex;align-items:center;gap:12px;
+  font-weight:700;font-size:1.15rem;
+  color:var(--text-primary);
+  letter-spacing:-.02em;
+}
+.header-logo .icon-shield{
+  width:36px;height:36px;
+  background:linear-gradient(135deg,#3b5bdb,#5c7cfa);
+  border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:1.1rem;
+  box-shadow:0 3px 12px rgba(59,91,219,.3);
+}
+.header-actions{
+  margin-left:auto;
+  display:flex;align-items:center;gap:8px;
+}
+.header-btn{
+  position:relative;
+  width:38px;height:38px;
+  border:none;border-radius:9px;
+  background:var(--bg-tertiary);
+  color:var(--text-secondary);
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;
+  transition:var(--transition);
+}
+.header-btn:hover{background:var(--accent-light);color:var(--accent)}
+.notification-badge{
+  position:absolute;top:4px;right:4px;
+  width:18px;height:18px;
+  background:#e03131;
+  color:#fff;
+  border-radius:50%;
+  font-size:.65rem;
+  font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  border:2px solid var(--bg-secondary);
+  animation:pulse-badge 2s infinite;
+}
+@keyframes pulse-badge{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.12)}
+}
+
+/* ========== Main ========== */
+.main{
+  margin-top:var(--header-h);
+  padding:28px;
+  max-width:1600px;
+  margin-left:auto;margin-right:auto;
+}
+
+/* ========== Stats Cards ========== */
+.stats-row{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:18px;
+  margin-bottom:28px;
+}
+.stat-card{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:22px 24px;
+  display:flex;align-items:center;gap:18px;
+  transition:var(--transition);
+  cursor:default;
+  position:relative;
+  overflow:hidden;
+}
+.stat-card::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+  opacity:0;transition:opacity .25s;
+}
+.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.stat-card:hover::after{opacity:1}
+.stat-card:nth-child(1)::after{background:linear-gradient(90deg,#3b5bdb,#5c7cfa)}
+.stat-card:nth-child(2)::after{background:linear-gradient(90deg,#e03131,#ff6b6b)}
+.stat-card:nth-child(3)::after{background:linear-gradient(90deg,#f59f00,#ffd43b)}
+.stat-card:nth-child(4)::after{background:linear-gradient(90deg,#2f9e44,#69db7c)}
+.stat-icon{
+  width:48px;height:48px;
+  border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.35rem;
+  flex-shrink:0;
+}
+.stat-icon.blue{background:var(--accent-light);color:var(--accent)}
+.stat-icon.red{background:var(--danger-light);color:var(--danger)}
+.stat-icon.yellow{background:var(--warning-light);color:var(--warning)}
+.stat-icon.green{background:var(--success-light);color:var(--success)}
+.stat-info{display:flex;flex-direction:column}
+.stat-value{font-size:1.85rem;font-weight:800;line-height:1.1;letter-spacing:-.03em;font-family:'JetBrains Mono','Noto Sans SC',monospace}
+.stat-label{font-size:.82rem;color:var(--text-tertiary);margin-top:3px;font-weight:400}
+
+/* ========== Toolbar ========== */
+.toolbar{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:20px;
+  flex-wrap:wrap;
+}
+.search-box{
+  flex:1;min-width:220px;max-width:380px;
+  position:relative;
+}
+.search-box input{
+  width:100%;height:42px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:0 14px 0 40px;
+  background:var(--bg-card);
+  color:var(--text-primary);
+  font-size:.88rem;
+  font-family:inherit;
+  transition:var(--transition);
+  outline:none;
+}
+.search-box input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,91,219,.1)}
+.search-box input::placeholder{color:var(--text-tertiary)}
+.search-box .search-icon{
+  position:absolute;left:13px;top:50%;transform:translateY(-50%);
+  color:var(--text-tertiary);font-size:.95rem;pointer-events:none;
+}
+.filter-select{
+  height:42px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:0 32px 0 14px;
+  background:var(--bg-card);
+  color:var(--text-primary);
+  font-size:.88rem;
+  font-family:inherit;
+  cursor:pointer;
+  outline:none;
+  transition:var(--transition);
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b90a5' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+}
+.filter-select:focus{border-color:var(--accent)}
+.btn{
+  height:42px;
+  padding:0 20px;
+  border:none;
+  border-radius:var(--radius);
+  font-size:.88rem;
+  font-weight:600;
+  font-family:inherit;
+  cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px;
+  transition:var(--transition);
+  white-space:nowrap;
+}
+.btn-primary{
+  background:var(--accent);
+  color:#fff;
+  box-shadow:0 2px 8px rgba(59,91,219,.25);
+}
+.btn-primary:hover{background:var(--accent-hover);transform:translateY(-1px);box-shadow:0 4px 14px rgba(59,91,219,.35)}
+.btn-outline{
+  background:var(--bg-card);
+  color:var(--text-secondary);
+  border:1px solid var(--border);
+}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+.toolbar-right{margin-left:auto;display:flex;gap:10px}
+
+/* ========== Table Container ========== */
+.table-container{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-xl);
+  overflow:hidden;
+  box-shadow:var(--shadow-sm);
+  transition:var(--transition);
+}
+.table-scroll{overflow-x:auto}
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:.84rem;
+}
+thead{
+  background:var(--bg-tertiary);
+  position:sticky;top:0;z-index:5;
+}
+thead th{
+  padding:14px 16px;
+  text-align:left;
+  font-weight:600;
+  color:var(--text-secondary);
+  font-size:.78rem;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+tbody tr{
+  transition:background .15s;
+  border-bottom:1px solid var(--border-light);
+}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--bg-tertiary)}
+tbody td{
+  padding:16px;
+  vertical-align:top;
+}
+
+/* Name cell */
+.name-cell{
+  font-weight:600;
+  color:var(--accent);
+  cursor:pointer;
+  transition:var(--transition);
+  white-space:nowrap;
+}
+.name-cell:hover{text-decoration:underline}
+.position-text{color:var(--text-secondary);font-size:.78rem;margin-top:3px;font-weight:400}
+
+/* Skill tags */
+.skill-tags{display:flex;flex-wrap:wrap;gap:5px}
+.skill-tag{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:3px 9px;
+  border-radius:6px;
+  font-size:.72rem;
+  font-weight:500;
+  background:var(--accent-light);
+  color:var(--accent);
+  white-space:nowrap;
+}
+.skill-tag .check{font-size:.65rem}
+
+/* Certificate cell */
+.cert-cell{min-width:170px}
+.cert-number{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.74rem;
+  color:var(--text-secondary);
+  word-break:break-all;
+}
+.cert-date{
+  font-size:.8rem;
+  font-weight:500;
+  margin-top:4px;
+  display:flex;align-items:center;gap:6px;
+}
+.cert-issuer{
+  font-size:.72rem;
+  color:var(--text-tertiary);
+  margin-top:3px;
+}
+.status-dot{
+  width:7px;height:7px;
+  border-radius:50%;
+  display:inline-block;
+  flex-shrink:0;
+}
+.status-dot.expired{background:var(--danger)}
+.status-dot.warning{background:var(--warning)}
+.status-dot.safe{background:var(--success)}
+
+/* Expiry badges */
+.expiry-stack{display:flex;flex-direction:column;gap:8px}
+.expiry-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 12px;
+  border-radius:7px;
+  font-size:.76rem;
+  font-weight:600;
+  white-space:nowrap;
+  letter-spacing:.01em;
+}
+.expiry-badge.expired{
+  background:var(--danger);
+  color:#fff;
+  animation:flash-expired 3s infinite;
+}
+@keyframes flash-expired{
+  0%,100%{opacity:1}
+  50%{opacity:.82}
+}
+.expiry-badge.urgent{background:var(--danger-light);color:var(--danger)}
+.expiry-badge.warning{background:var(--warning-light);color:#b97a00}
+.expiry-badge.safe{background:var(--success-light);color:var(--success)}
+.expiry-badge .badge-icon{font-size:.85rem}
+.expiry-label{font-size:.68rem;color:var(--text-tertiary);margin-bottom:2px}
+
+/* Upload cell */
+.upload-cell{min-width:160px}
+.upload-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 14px;
+  border:1px dashed var(--border);
+  border-radius:8px;
+  background:var(--bg-tertiary);
+  color:var(--text-secondary);
+  font-size:.78rem;
+  font-family:inherit;
+  cursor:pointer;
+  transition:var(--transition);
+  width:100%;
+  justify-content:center;
+}
+.upload-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+.file-item{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 10px;
+  background:var(--bg-tertiary);
+  border:1px solid var(--border-light);
+  border-radius:7px;
+  font-size:.75rem;
+  margin-top:6px;
+}
+.file-item .file-name{
+  flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:var(--text-primary);
+  max-width:100px;
+}
+.file-item button{
+  width:24px;height:24px;
+  border:none;border-radius:5px;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;
+  transition:var(--transition);
+  background:transparent;
+  color:var(--text-tertiary);
+  flex-shrink:0;
+}
+.file-item .preview-btn:hover{background:var(--accent-light);color:var(--accent)}
+.file-item .delete-btn:hover{background:var(--danger-light);color:var(--danger)}
+
+/* Timeline bar */
+.timeline-bar{
+  display:flex;gap:3px;
+  margin-top:8px;
+  height:5px;
+  border-radius:3px;
+  overflow:hidden;
+}
+.timeline-segment{
+  flex:1;
+  border-radius:3px;
+  transition:var(--transition);
+}
+.timeline-segment.expired{background:var(--danger)}
+.timeline-segment.warning{background:var(--warning)}
+.timeline-segment.safe{background:var(--success)}
+.timeline-segment:hover{opacity:.7;transform:scaleY(1.8)}
+
+/* ========== Modal ========== */
+.modal-overlay{
+  position:fixed;inset:0;
+  background:rgba(15,17,23,.55);
+  backdrop-filter:blur(6px);
+  z-index:200;
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+  opacity:0;visibility:hidden;
+  transition:all .3s;
+}
+.modal-overlay.active{opacity:1;visibility:visible}
+.modal{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-xl);
+  max-width:680px;
+  width:100%;
+  max-height:85vh;
+  overflow-y:auto;
+  box-shadow:var(--shadow-xl);
+  transform:translateY(16px) scale(.97);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+}
+.modal-overlay.active .modal{transform:translateY(0) scale(1)}
+.modal-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:22px 28px;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;
+  background:var(--bg-card);
+  z-index:2;
+}
+.modal-title{font-size:1.1rem;font-weight:700}
+.modal-close{
+  width:34px;height:34px;
+  border:none;border-radius:8px;
+  background:var(--bg-tertiary);
+  color:var(--text-secondary);
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;
+  transition:var(--transition);
+}
+.modal-close:hover{background:var(--danger-light);color:var(--danger)}
+.modal-body{padding:24px 28px}
+
+/* Detail modal specific */
+.detail-header{
+  display:flex;align-items:center;gap:16px;
+  margin-bottom:24px;
+}
+.detail-avatar{
+  width:56px;height:56px;
+  border-radius:14px;
+  background:linear-gradient(135deg,var(--accent),#5c7cfa);
+  color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.5rem;font-weight:700;
+  flex-shrink:0;
+}
+.detail-name{font-size:1.3rem;font-weight:700}
+.detail-position{color:var(--text-secondary);font-size:.88rem;margin-top:2px}
+.detail-skills{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.cert-detail-card{
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:18px;
+  margin-bottom:14px;
+  position:relative;
+  overflow:hidden;
+}
+.cert-detail-card::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
+}
+.cert-detail-card.expired::before{background:var(--danger)}
+.cert-detail-card.warning::before{background:var(--warning)}
+.cert-detail-card.safe::before{background:var(--success)}
+.cert-detail-title{
+  font-weight:600;font-size:.95rem;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px;
+}
+.cert-detail-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.cert-detail-item label{
+  display:block;font-size:.72rem;
+  color:var(--text-tertiary);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  margin-bottom:2px;
+}
+.cert-detail-item span{
+  font-size:.88rem;
+  font-weight:500;
+}
+
+/* Add Employee Form */
+.form-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:.82rem;font-weight:500;color:var(--text-secondary)}
+.form-input{
+  height:40px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:0 12px;
+  background:var(--bg-tertiary);
+  color:var(--text-primary);
+  font-size:.88rem;
+  font-family:inherit;
+  outline:none;
+  transition:var(--transition);
+}
+.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,91,219,.08)}
+.form-section-title{
+  font-weight:600;font-size:.95rem;
+  margin:20px 0 12px;
+  padding-bottom:8px;
+  border-bottom:1px solid var(--border);
+  color:var(--text-primary);
+  grid-column:1/-1;
+}
+.form-actions{
+  grid-column:1/-1;
+  display:flex;gap:10px;
+  justify-content:flex-end;
+  margin-top:12px;
+}
+.checkbox-group{
+  display:flex;flex-wrap:wrap;gap:10px;
+  grid-column:1/-1;
+}
+.checkbox-label{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:.84rem;
+  color:var(--text-secondary);
+  cursor:pointer;
+}
+.checkbox-label input{accent-color:var(--accent)}
+
+/* ========== Notification Panel ========== */
+.notification-panel{
+  position:fixed;top:var(--header-h);right:0;
+  width:380px;max-height:calc(100vh - var(--header-h));
+  background:var(--bg-card);
+  border-left:1px solid var(--border);
+  box-shadow:var(--shadow-lg);
+  z-index:150;
+  transform:translateX(100%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  overflow-y:auto;
+}
+.notification-panel.open{transform:translateX(0)}
+.notif-header{
+  padding:20px;
+  border-bottom:1px solid var(--border);
+  font-weight:700;
+  font-size:1rem;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;
+  background:var(--bg-card);
+  z-index:2;
+}
+.notif-item{
+  padding:16px 20px;
+  border-bottom:1px solid var(--border-light);
+  display:flex;gap:12px;
+  transition:background .15s;
+}
+.notif-item:hover{background:var(--bg-tertiary)}
+.notif-dot{
+  width:8px;height:8px;
+  border-radius:50%;
+  margin-top:6px;
+  flex-shrink:0;
+}
+.notif-dot.red{background:var(--danger)}
+.notif-dot.yellow{background:var(--warning)}
+.notif-content{flex:1}
+.notif-text{font-size:.84rem;color:var(--text-primary);line-height:1.5}
+.notif-text strong{font-weight:600}
+.notif-time{font-size:.72rem;color:var(--text-tertiary);margin-top:4px}
+
+/* ========== Preview Modal ========== */
+.preview-content{
+  text-align:center;
+  padding:20px 0;
+}
+.preview-file-icon{
+  width:80px;height:80px;
+  margin:0 auto 20px;
+  background:var(--accent-light);
+  border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:2rem;
+  color:var(--accent);
+}
+.preview-info{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:8px 16px;
+  text-align:left;
+  max-width:360px;
+  margin:0 auto;
+  font-size:.88rem;
+}
+.preview-info dt{color:var(--text-tertiary);font-weight:500}
+.preview-info dd{color:var(--text-primary)}
+
+/* ========== Responsive ========== */
+@media(max-width:1100px){
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:768px){
+  .stats-row{grid-template-columns:1fr}
+  .toolbar{flex-direction:column;align-items:stretch}
+  .search-box{max-width:none}
+  .toolbar-right{margin-left:0;justify-content:flex-end}
+  .main{padding:16px}
+  .form-grid{grid-template-columns:1fr}
+}
+
+/* ========== Scrollbar ========== */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-tertiary)}
+
+/* ========== Animations ========== */
+@keyframes fadeInUp{
+  from{opacity:0;transform:translateY(12px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.animate-in{animation:fadeInUp .4s ease forwards;opacity:0}
+.delay-1{animation-delay:.05s}
+.delay-2{animation-delay:.1s}
+.delay-3{animation-delay:.15s}
+.delay-4{animation-delay:.2s}
+
+/* Row index */
+.row-index{
+  font-family:'JetBrains Mono',monospace;
+  font-weight:600;
+  color:var(--text-tertiary);
+  font-size:.82rem;
+}
+
+/* Row expired highlight */
+tbody tr.row-has-expired{
+  background:var(--danger-light);
+}
+tbody tr.row-has-expired:hover{
+  background:color-mix(in srgb, var(--danger-light) 70%, var(--bg-tertiary));
+}
+
+/* Action buttons in table */
+.row-actions{
+  display:flex;gap:6px;
+  margin-top:8px;
+}
+.row-action-btn{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:5px 10px;
+  border:1px solid var(--border);
+  border-radius:6px;
+  background:var(--bg-tertiary);
+  color:var(--text-secondary);
+  font-size:.72rem;
+  font-family:inherit;
+  cursor:pointer;
+  transition:var(--transition);
+  white-space:nowrap;
+}
+.row-action-btn:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+  background:var(--accent-light);
+}
+.row-action-btn.danger:hover{
+  border-color:var(--danger);
+  color:var(--danger);
+  background:var(--danger-light);
+}
+
+/* Sort button */
+.sort-btn{
+  height:42px;
+  padding:0 14px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--bg-card);
+  color:var(--text-secondary);
+  font-size:.86rem;
+  font-family:inherit;
+  cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;
+  transition:var(--transition);
+}
+.sort-btn:hover{border-color:var(--accent);color:var(--accent)}
+.sort-btn .sort-arrow{font-size:.7rem;transition:transform .2s}
+
+/* Date display in header */
+.header-date{
+  font-size:.78rem;
+  color:var(--text-tertiary);
+  margin-left:16px;
+  padding-left:16px;
+  border-left:1px solid var(--border);
+  font-weight:400;
+}
+
+/* Toast */
+.toast-container{
+  position:fixed;bottom:24px;right:24px;z-index:300;
+  display:flex;flex-direction:column;gap:10px;
+}
+.toast{
+  padding:14px 20px;
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-lg);
+  font-size:.86rem;
+  display:flex;align-items:center;gap:10px;
+  animation:slideInRight .3s ease;
+  min-width:260px;
+}
+@keyframes slideInRight{
+  from{opacity:0;transform:translateX(30px)}
+  to{opacity:1;transform:translateX(0)}
+}
+.toast .toast-icon{font-size:1.1rem}
+.toast.success .toast-icon{color:var(--success)}
+.toast.error .toast-icon{color:var(--danger)}
+
+/* Empty state */
+.empty-state{
+  text-align:center;
+  padding:60px 20px;
+  color:var(--text-tertiary);
+}
+.empty-state .empty-icon{font-size:2.5rem;margin-bottom:12px;opacity:.5}
+.empty-state p{font-size:.92rem}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-logo">
+    <div class="icon-shield">&#x1F6E1;</div>
+    <span>员工上岗证管理系统</span>
+    <span class="header-date" id="headerDate"></span>
+  </div>
+  <div class="header-actions">
+    <button class="header-btn" id="notifBtn" title="通知">
+      &#x1F514;
+      <span class="notification-badge" id="notifBadge">0</span>
+    </button>
+    <button class="header-btn" id="themeBtn" title="切换主题">&#x1F319;</button>
+  </div>
+</header>
+
+<!-- Notification Panel -->
+<div class="notification-panel" id="notifPanel">
+  <div class="notif-header">
+    <span>&#x1F514; 证书到期提醒</span>
+    <button class="modal-close" onclick="toggleNotifPanel()" style="width:28px;height:28px;font-size:.9rem">&#x2715;</button>
+  </div>
+  <div id="notifList"></div>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+  <!-- Stats -->
+  <div class="stats-row" id="statsRow">
+    <div class="stat-card animate-in delay-1">
+      <div class="stat-icon blue">&#x1F465;</div>
+      <div class="stat-info">
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-label">在册员工</div>
+      </div>
+    </div>
+    <div class="stat-card animate-in delay-2">
+      <div class="stat-icon red">&#x26A0;</div>
+      <div class="stat-info">
+        <div class="stat-value" id="statExpired">0</div>
+        <div class="stat-label">已过期证书</div>
+      </div>
+    </div>
+    <div class="stat-card animate-in delay-3">
+      <div class="stat-icon yellow">&#x23F3;</div>
+      <div class="stat-info">
+        <div class="stat-value" id="statExpiring">0</div>
+        <div class="stat-label">即将到期（30天内）</div>
+      </div>
+    </div>
+    <div class="stat-card animate-in delay-4">
+      <div class="stat-icon green">&#x2705;</div>
+      <div class="stat-info">
+        <div class="stat-value" id="statValid">0</div>
+        <div class="stat-label">有效证书</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar animate-in delay-3">
+    <div class="search-box">
+      <span class="search-icon">&#x1F50D;</span>
+      <input type="text" id="searchInput" placeholder="搜索姓名、岗位、证书号...">
+    </div>
+    <select class="filter-select" id="filterSelect">
+      <option value="all">全部状态</option>
+      <option value="expired">已到期</option>
+      <option value="expiring">即将到期（30天内）</option>
+      <option value="valid">有效</option>
+    </select>
+    <select class="filter-select" id="sortSelect">
+      <option value="default">默认排序</option>
+      <option value="urgency">按紧急程度</option>
+      <option value="name">按姓名</option>
+    </select>
+    <div class="toolbar-right">
+      <button class="btn btn-outline" onclick="importCSV()" title="从CSV导入数据">&#x1F4C2; 导入数据</button>
+      <input type="file" id="csvImportInput" accept=".csv" style="display:none" onchange="handleCSVImport(this)">
+      <button class="btn btn-outline" onclick="exportData()">&#x1F4E5; 导出数据</button>
+      <button class="btn btn-outline" onclick="resetToDefault()" title="恢复为初始默认数据" style="color:var(--danger)">&#x21BB; 重置</button>
+      <button class="btn btn-primary" onclick="openAddModal()">&#x2795; 添加员工</button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-container animate-in delay-4">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>序号</th>
+            <th>姓名 / 岗位</th>
+            <th>技能资质</th>
+            <th>安检证书</th>
+            <th>环保证书</th>
+            <th>内审证书</th>
+            <th>距离到期时间</th>
+            <th>证书扫描件</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none">
+        <div class="empty-icon">&#x1F4CB;</div>
+        <p>暂无匹配的员工数据</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">&#x1F4CB; 员工证书详情</div>
+      <button class="modal-close" onclick="closeModal('detailModal')">&#x2715;</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+  </div>
+</div>
+
+<!-- Add/Edit Employee Modal -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header">
+      <div class="modal-title" id="formModalTitle">&#x2795; 添加新员工</div>
+      <button class="modal-close" onclick="closeModal('addModal')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <form id="addForm" onsubmit="handleSaveEmployee(event)">
+        <input type="hidden" name="editId" id="editId" value="">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">姓名 *</label>
+            <input class="form-input" name="name" required placeholder="请输入姓名">
+          </div>
+          <div class="form-group">
+            <label class="form-label">岗位 *</label>
+            <input class="form-input" name="position" required placeholder="请输入岗位">
+          </div>
+          <div class="form-group full">
+            <label class="form-label">技能资质</label>
+            <div class="checkbox-group">
+              <label class="checkbox-label"><input type="checkbox" name="skills" value="外观"> 外观</label>
+              <label class="checkbox-label"><input type="checkbox" name="skills" value="底盘"> 底盘</label>
+              <label class="checkbox-label"><input type="checkbox" name="skills" value="引车"> 引车</label>
+              <label class="checkbox-label"><input type="checkbox" name="skills" value="摩托"> 摩托</label>
+              <label class="checkbox-label"><input type="checkbox" name="skills" value="OBD"> OBD</label>
+              <label class="checkbox-label"><input type="checkbox" name="skills" value="登录"> 登录</label>
+            </div>
+          </div>
+
+          <div class="form-section-title">安检证书</div>
+          <div class="form-group">
+            <label class="form-label">证书号</label>
+            <input class="form-input" name="cert_safety_no" placeholder="证书编号">
+          </div>
+          <div class="form-group">
+            <label class="form-label">有效期</label>
+            <input class="form-input" name="cert_safety_date" type="date">
+          </div>
+          <div class="form-group full">
+            <label class="form-label">发证单位</label>
+            <input class="form-input" name="cert_safety_issuer" placeholder="发证单位名称">
+          </div>
+
+          <div class="form-section-title">环保证书</div>
+          <div class="form-group">
+            <label class="form-label">证书号</label>
+            <input class="form-input" name="cert_env_no" placeholder="证书编号">
+          </div>
+          <div class="form-group">
+            <label class="form-label">有效期</label>
+            <input class="form-input" name="cert_env_date" type="date">
+          </div>
+          <div class="form-group full">
+            <label class="form-label">发证单位</label>
+            <input class="form-input" name="cert_env_issuer" placeholder="发证单位名称">
+          </div>
+
+          <div class="form-section-title">内审证书</div>
+          <div class="form-group">
+            <label class="form-label">证书号</label>
+            <input class="form-input" name="cert_audit_no" placeholder="证书编号">
+          </div>
+          <div class="form-group">
+            <label class="form-label">有效期</label>
+            <input class="form-input" name="cert_audit_date" type="date">
+          </div>
+          <div class="form-group full">
+            <label class="form-label">发证单位</label>
+            <input class="form-input" name="cert_audit_issuer" placeholder="发证单位名称">
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" onclick="closeModal('addModal')">取消</button>
+            <button type="submit" class="btn btn-primary" id="formSubmitBtn">&#x2714; 确认添加</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal-overlay" id="previewModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">&#x1F4C4; 文件预览</div>
+      <button class="modal-close" onclick="closeModal('previewModal')">&#x2715;</button>
+    </div>
+    <div class="modal-body" id="previewBody"></div>
+  </div>
+</div>
+
+<!-- Storage Footer -->
+<div style="max-width:1600px;margin:16px auto 24px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;font-size:.75rem;color:var(--text-tertiary)">
+  <span id="storageInfo">&#x2601; 正在连接云数据库...</span>
+  <span>&#x2601; 数据存储在云端，电脑和手机可同步访问 | 文件仅保存在当前浏览器</span>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ==================== SUPABASE CONFIG ====================
+const SUPABASE_URL = 'https://kktfhbarblahyiqwihyh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrdGZoYmFyYmxhaHlpcXdpaHloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzIwMzAsImV4cCI6MjA4NzY0ODAzMH0.u8X6zVO-FUEK0FyllUpe5mhU12ZNXPAPjcac-uEu9nQ';
+const API = `${SUPABASE_URL}/rest/v1/employees`;
+const HEADERS = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation'
+};
+
+// ==================== DATA ====================
+const TODAY = new Date();
+let employees = [];
+
+// DB row -> frontend object
+function dbToEmp(row) {
+  return {
+    id: row.id,
+    name: row.name || '',
+    position: row.position || '',
+    skills: row.skills || [],
+    certs: {
+      safety: { no: row.cert_safety_no || '-', date: row.cert_safety_date || '2025-01-01', issuer: row.cert_safety_issuer || '-' },
+      env:    { no: row.cert_env_no || '-', date: row.cert_env_date || '2025-01-01', issuer: row.cert_env_issuer || '-' },
+      audit:  { no: row.cert_audit_no || '-', date: row.cert_audit_date || '2025-01-01', issuer: row.cert_audit_issuer || '-' }
+    },
+    files: [] // files stay local
+  };
+}
+
+// Frontend object -> DB row
+function empToDb(emp) {
+  return {
+    name: emp.name,
+    position: emp.position,
+    skills: emp.skills,
+    cert_safety_no: emp.certs.safety.no,
+    cert_safety_date: emp.certs.safety.date || null,
+    cert_safety_issuer: emp.certs.safety.issuer,
+    cert_env_no: emp.certs.env.no,
+    cert_env_date: emp.certs.env.date || null,
+    cert_env_issuer: emp.certs.env.issuer,
+    cert_audit_no: emp.certs.audit.no,
+    cert_audit_date: emp.certs.audit.date || null,
+    cert_audit_issuer: emp.certs.audit.issuer
+  };
+}
+
+// ==================== SUPABASE API ====================
+async function dbFetchAll() {
+  const res = await fetch(`${API}?select=*&order=id.asc`, { headers: HEADERS });
+  if (!res.ok) throw new Error(`加载失败: ${res.status}`);
+  const rows = await res.json();
+  return rows.map(dbToEmp);
+}
+
+async function dbInsert(emp) {
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: HEADERS,
+    body: JSON.stringify(empToDb(emp))
+  });
+  if (!res.ok) throw new Error(`添加失败: ${res.status}`);
+  const rows = await res.json();
+  return dbToEmp(rows[0]);
+}
+
+async function dbUpdate(id, emp) {
+  const res = await fetch(`${API}?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: HEADERS,
+    body: JSON.stringify(empToDb(emp))
+  });
+  if (!res.ok) throw new Error(`更新失败: ${res.status}`);
+  return true;
+}
+
+async function dbDelete(id) {
+  const res = await fetch(`${API}?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: HEADERS
+  });
+  if (!res.ok) throw new Error(`删除失败: ${res.status}`);
+  return true;
+}
+
+// ==================== LOCAL FILE STORAGE ====================
+// Files remain in localStorage (too large for DB free tier)
+function loadLocalFiles(emp) {
+  try {
+    const raw = localStorage.getItem(`cert_mgr_files_${emp.id}`);
+    if (raw) {
+      emp.files = JSON.parse(raw);
+    }
+  } catch(e) { /* ignore */ }
+}
+
+function saveLocalFiles(emp) {
+  try {
+    const fileKey = `cert_mgr_files_${emp.id}`;
+    if (emp.files.length > 0) {
+      localStorage.setItem(fileKey, JSON.stringify(emp.files));
+    } else {
+      localStorage.removeItem(fileKey);
+    }
+  } catch(e) {
+    console.warn('文件存储失败', e);
+  }
+}
+
+function updateStatusBar(msg) {
+  const info = document.getElementById('storageInfo');
+  if (info) info.textContent = msg;
+}
+
+// ==================== SEED DEFAULT DATA ====================
+const DEFAULT_EMPLOYEES = [
+  { name:'张华', position:'授权签字人/质量负责人', skills:['外观','底盘','引车'],
+    certs:{ safety:{no:'JCXH-2020040018-JN',date:'2023-04-24',issuer:'浙江省机动车检测行业协会'}, env:{no:'(机)字第2022021130',date:'2025-04-01',issuer:'浙江省环境监测协会'}, audit:{no:'GS-NS-2018-4569',date:'2024-08-02',issuer:'北京国实检测技术研究院'} }},
+  { name:'吴皓', position:'设备网络管理员/外观检验员', skills:['外观','底盘','引车','摩托','OBD','登录'],
+    certs:{ safety:{no:'JCXH-2022060001-JN',date:'2025-06-11',issuer:'浙江省机动车检测行业协会'}, env:{no:'(机)字第20221124',date:'2025-04-01',issuer:'浙江省环境监测协会'}, audit:{no:'CCAA-11-01-1906-00115',date:'2025-06-03',issuer:'浙江省质量合格评定协会'} }},
+  { name:'陈杭', position:'检测车间主任/引车员', skills:['外观','底盘','引车','摩托','OBD','登录'],
+    certs:{ safety:{no:'JCXH-2022090017-JN',date:'2025-09-15',issuer:'浙江省机动车检测行业协会'}, env:{no:'(机)字第2022023051',date:'2025-10-20',issuer:'浙江省环境监测协会'}, audit:{no:'CCAA-11-01-1906-00116',date:'2025-06-03',issuer:'浙江省质量合格评定协会'} }}
+];
+
+async function seedIfEmpty() {
+  for (const def of DEFAULT_EMPLOYEES) {
+    await dbInsert(def);
+  }
+}
+
+// ==================== UTILITIES ====================
+function daysDiff(dateStr) {
+  if (!dateStr) return -9999;
+  const d = new Date(dateStr);
+  const diff = d.getTime() - TODAY.getTime();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+function expiryStatus(days) {
+  if (days < 0) return 'expired';
+  if (days <= 30) return 'urgent';
+  if (days <= 90) return 'warning';
+  return 'safe';
+}
+
+function expiryText(days) {
+  if (days < 0) return `已到期 ${Math.abs(days)} 天`;
+  if (days === 0) return '今日到期';
+  return `${days} 天后到期`;
+}
+
+function expiryIcon(status) {
+  switch(status) {
+    case 'expired': return '&#x1F534;';
+    case 'urgent': return '&#x1F7E0;';
+    case 'warning': return '&#x1F7E1;';
+    default: return '&#x1F7E2;';
+  }
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+}
+
+function dotClass(days) {
+  if (days < 0) return 'expired';
+  if (days <= 90) return 'warning';
+  return 'safe';
+}
+
+// ==================== STATS ====================
+function updateStats() {
+  let expired = 0, expiring = 0, valid = 0;
+  employees.forEach(emp => {
+    ['safety','env','audit'].forEach(key => {
+      const d = daysDiff(emp.certs[key].date);
+      if (d < 0) expired++;
+      else if (d <= 30) expiring++;
+      else valid++;
+    });
+  });
+  document.getElementById('statTotal').textContent = employees.length;
+  document.getElementById('statExpired').textContent = expired;
+  document.getElementById('statExpiring').textContent = expiring;
+  document.getElementById('statValid').textContent = valid;
+
+  const badgeCount = expired + expiring;
+  const badge = document.getElementById('notifBadge');
+  badge.textContent = badgeCount;
+  badge.style.display = badgeCount > 0 ? 'flex' : 'none';
+
+  buildNotifications();
+}
+
+// ==================== NOTIFICATIONS ====================
+function buildNotifications() {
+  const list = document.getElementById('notifList');
+  let html = '';
+  employees.forEach(emp => {
+    const certNames = { safety: '安检证书', env: '环保证书', audit: '内审证书' };
+    ['safety','env','audit'].forEach(key => {
+      const d = daysDiff(emp.certs[key].date);
+      if (d < 0) {
+        html += `<div class="notif-item">
+          <div class="notif-dot red"></div>
+          <div class="notif-content">
+            <div class="notif-text"><strong>${emp.name}</strong> 的 ${certNames[key]} 已过期 ${Math.abs(d)} 天</div>
+            <div class="notif-time">证书号: ${emp.certs[key].no}</div>
+          </div>
+        </div>`;
+      } else if (d <= 30) {
+        html += `<div class="notif-item">
+          <div class="notif-dot yellow"></div>
+          <div class="notif-content">
+            <div class="notif-text"><strong>${emp.name}</strong> 的 ${certNames[key]} 将在 ${d} 天后到期</div>
+            <div class="notif-time">证书号: ${emp.certs[key].no}</div>
+          </div>
+        </div>`;
+      }
+    });
+  });
+  if (!html) html = '<div style="padding:40px;text-align:center;color:var(--text-tertiary)">&#x2705; 暂无到期提醒</div>';
+  list.innerHTML = html;
+}
+
+// ==================== RENDER TABLE ====================
+function renderTable() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const filter = document.getElementById('filterSelect').value;
+  const sort = document.getElementById('sortSelect').value;
+
+  let filtered = employees.filter(emp => {
+    const text = (emp.name + emp.position + emp.certs.safety.no + emp.certs.env.no + emp.certs.audit.no).toLowerCase();
+    if (search && !text.includes(search)) return false;
+    if (filter === 'all') return true;
+    const days = ['safety','env','audit'].map(k => daysDiff(emp.certs[k].date));
+    if (filter === 'expired') return days.some(d => d < 0);
+    if (filter === 'expiring') return days.some(d => d >= 0 && d <= 30);
+    if (filter === 'valid') return days.every(d => d > 30);
+    return true;
+  });
+
+  if (sort === 'urgency') {
+    filtered.sort((a, b) => {
+      const minA = Math.min(...['safety','env','audit'].map(k => daysDiff(a.certs[k].date)));
+      const minB = Math.min(...['safety','env','audit'].map(k => daysDiff(b.certs[k].date)));
+      return minA - minB;
+    });
+  } else if (sort === 'name') {
+    filtered.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+  }
+
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = filtered.map((emp, idx) => {
+    const safetyDays = daysDiff(emp.certs.safety.date);
+    const envDays = daysDiff(emp.certs.env.date);
+    const auditDays = daysDiff(emp.certs.audit.date);
+    const hasExpired = safetyDays < 0 || envDays < 0 || auditDays < 0;
+
+    return `<tr class="${hasExpired ? 'row-has-expired' : ''}">
+      <td><span class="row-index">${idx + 1}</span></td>
+      <td>
+        <div class="name-cell" onclick="openDetail(${emp.id})">${emp.name}</div>
+        <div class="position-text">${emp.position}</div>
+        <div class="timeline-bar" title="安检 / 环保 / 内审 证书状态">
+          <div class="timeline-segment ${dotClass(safetyDays)}"></div>
+          <div class="timeline-segment ${dotClass(envDays)}"></div>
+          <div class="timeline-segment ${dotClass(auditDays)}"></div>
+        </div>
+      </td>
+      <td>
+        <div class="skill-tags">
+          ${emp.skills.map(s => `<span class="skill-tag"><span class="check">&#x2713;</span>${s}</span>`).join('')}
+        </div>
+      </td>
+      <td class="cert-cell">
+        <div class="cert-date"><span class="status-dot ${dotClass(safetyDays)}"></span>${formatDate(emp.certs.safety.date)}</div>
+        <div class="cert-number">${emp.certs.safety.no}</div>
+        <div class="cert-issuer">${emp.certs.safety.issuer}</div>
+      </td>
+      <td class="cert-cell">
+        <div class="cert-date"><span class="status-dot ${dotClass(envDays)}"></span>${formatDate(emp.certs.env.date)}</div>
+        <div class="cert-number">${emp.certs.env.no}</div>
+        <div class="cert-issuer">${emp.certs.env.issuer}</div>
+      </td>
+      <td class="cert-cell">
+        <div class="cert-date"><span class="status-dot ${dotClass(auditDays)}"></span>${formatDate(emp.certs.audit.date)}</div>
+        <div class="cert-number">${emp.certs.audit.no}</div>
+        <div class="cert-issuer">${emp.certs.audit.issuer}</div>
+      </td>
+      <td>
+        <div class="expiry-stack">
+          <div>
+            <div class="expiry-label">安检</div>
+            <span class="expiry-badge ${expiryStatus(safetyDays)}">${expiryIcon(expiryStatus(safetyDays))} ${expiryText(safetyDays)}</span>
+          </div>
+          <div>
+            <div class="expiry-label">环保</div>
+            <span class="expiry-badge ${expiryStatus(envDays)}">${expiryIcon(expiryStatus(envDays))} ${expiryText(envDays)}</span>
+          </div>
+          <div>
+            <div class="expiry-label">内审</div>
+            <span class="expiry-badge ${expiryStatus(auditDays)}">${expiryIcon(expiryStatus(auditDays))} ${expiryText(auditDays)}</span>
+          </div>
+        </div>
+      </td>
+      <td class="upload-cell">
+        <button class="upload-btn" onclick="triggerUpload(${emp.id})">
+          &#x1F4CE; 上传文件
+        </button>
+        <input type="file" id="fileInput_${emp.id}" accept=".doc,.docx,.pdf" style="display:none" onchange="handleFileUpload(${emp.id}, this)">
+        <div id="fileList_${emp.id}">
+          ${emp.files.map((f, fi) => fileItemHTML(emp.id, fi, f.name)).join('')}
+        </div>
+        <div class="row-actions">
+          <button class="row-action-btn" onclick="openEditModal(${emp.id})">&#x270F; 编辑</button>
+          <button class="row-action-btn danger" onclick="deleteEmployee(${emp.id})">&#x1F5D1; 删除</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function fileItemHTML(empId, fileIdx, fileName) {
+  return `<div class="file-item">
+    <span class="file-name" title="${fileName}">${fileName}</span>
+    <button class="preview-btn" onclick="previewFile(${empId},${fileIdx})" title="预览">&#x1F441;</button>
+    <button class="delete-btn" onclick="deleteFile(${empId},${fileIdx})" title="删除">&#x1F5D1;</button>
+  </div>`;
+}
+
+// ==================== FILE OPERATIONS (LOCAL) ====================
+function triggerUpload(empId) {
+  document.getElementById(`fileInput_${empId}`).click();
+}
+
+function handleFileUpload(empId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const emp = employees.find(e => e.id === empId);
+  if (!emp) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    emp.files.push({
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      lastModified: new Date(file.lastModified).toLocaleString('zh-CN'),
+      dataUrl: e.target.result
+    });
+    saveLocalFiles(emp);
+    renderTable();
+    showToast('success', `文件 "${file.name}" 上传成功（保存在本地浏览器）`);
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function previewFile(empId, fileIdx) {
+  const emp = employees.find(e => e.id === empId);
+  if (!emp || !emp.files[fileIdx]) return;
+  const f = emp.files[fileIdx];
+
+  const ext = f.name.split('.').pop().toLowerCase();
+  let icon = '&#x1F4C4;';
+  if (ext === 'pdf') icon = '&#x1F4D5;';
+  else if (ext === 'doc' || ext === 'docx') icon = '&#x1F4D8;';
+
+  document.getElementById('previewBody').innerHTML = `
+    <div class="preview-content">
+      <div class="preview-file-icon">${icon}</div>
+      <dl class="preview-info">
+        <dt>文件名</dt><dd>${f.name}</dd>
+        <dt>类型</dt><dd>${f.type || '未知'}</dd>
+        <dt>大小</dt><dd>${(f.size / 1024).toFixed(1)} KB</dd>
+        <dt>修改时间</dt><dd>${f.lastModified}</dd>
+        <dt>所属员工</dt><dd>${emp.name}</dd>
+      </dl>
+      <div style="margin-top:20px">
+        <a href="${f.dataUrl}" download="${f.name}" class="btn btn-primary" style="text-decoration:none">&#x1F4E5; 下载文件</a>
+      </div>
+    </div>`;
+  openModal('previewModal');
+}
+
+function deleteFile(empId, fileIdx) {
+  const emp = employees.find(e => e.id === empId);
+  if (!emp) return;
+  const name = emp.files[fileIdx].name;
+  emp.files.splice(fileIdx, 1);
+  saveLocalFiles(emp);
+  renderTable();
+  showToast('success', `文件 "${name}" 已删除`);
+}
+
+// ==================== DETAIL MODAL ====================
+function openDetail(empId) {
+  const emp = employees.find(e => e.id === empId);
+  if (!emp) return;
+
+  const certNames = { safety: '安检证书', env: '环保证书', audit: '内审证书' };
+  const certIcons = { safety: '&#x1F6E1;', env: '&#x1F33F;', audit: '&#x1F4DD;' };
+
+  let certsHTML = '';
+  ['safety','env','audit'].forEach(key => {
+    const d = daysDiff(emp.certs[key].date);
+    const st = expiryStatus(d);
+    certsHTML += `
+      <div class="cert-detail-card ${st === 'expired' ? 'expired' : st === 'urgent' || st === 'warning' ? 'warning' : 'safe'}">
+        <div class="cert-detail-title">
+          <span>${certIcons[key]} ${certNames[key]}</span>
+          <span class="expiry-badge ${st}">${expiryIcon(st)} ${expiryText(d)}</span>
+        </div>
+        <div class="cert-detail-grid">
+          <div class="cert-detail-item"><label>证书号</label><span>${emp.certs[key].no}</span></div>
+          <div class="cert-detail-item"><label>有效期至</label><span>${formatDate(emp.certs[key].date)}</span></div>
+          <div class="cert-detail-item" style="grid-column:1/-1"><label>发证单位</label><span>${emp.certs[key].issuer}</span></div>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-header">
+      <div class="detail-avatar">${emp.name[0]}</div>
+      <div style="flex:1">
+        <div class="detail-name">${emp.name}</div>
+        <div class="detail-position">${emp.position}</div>
+        <div class="detail-skills">
+          ${emp.skills.map(s => `<span class="skill-tag"><span class="check">&#x2713;</span>${s}</span>`).join('')}
+        </div>
+      </div>
+      <button class="btn btn-outline" onclick="closeModal('detailModal');openEditModal(${emp.id})" style="flex-shrink:0;height:36px;font-size:.82rem">&#x270F; 编辑信息</button>
+    </div>
+    ${certsHTML}
+    <div style="margin-top:8px">
+      <div style="font-weight:600;font-size:.9rem;margin-bottom:10px">&#x1F4CE; 已上传文件 (${emp.files.length})</div>
+      ${emp.files.length === 0 ? '<div style="color:var(--text-tertiary);font-size:.84rem">暂无上传文件</div>' :
+        emp.files.map((f, i) => `<div class="file-item" style="margin-bottom:6px">
+          <span class="file-name" title="${f.name}" style="max-width:200px">${f.name}</span>
+          <span style="font-size:.72rem;color:var(--text-tertiary)">${(f.size/1024).toFixed(1)}KB</span>
+          <button class="preview-btn" onclick="closeModal('detailModal');previewFile(${emp.id},${i})" title="预览">&#x1F441;</button>
+        </div>`).join('')
+      }
+    </div>`;
+  openModal('detailModal');
+}
+
+// ==================== ADD / EDIT EMPLOYEE ====================
+function openAddModal() {
+  document.getElementById('addForm').reset();
+  document.getElementById('editId').value = '';
+  document.getElementById('formModalTitle').innerHTML = '&#x2795; 添加新员工';
+  document.getElementById('formSubmitBtn').innerHTML = '&#x2714; 确认添加';
+  openModal('addModal');
+}
+
+function openEditModal(empId) {
+  const emp = employees.find(e => e.id === empId);
+  if (!emp) return;
+
+  const f = document.getElementById('addForm');
+  f.reset();
+
+  document.getElementById('editId').value = emp.id;
+  document.getElementById('formModalTitle').innerHTML = '&#x270F; 编辑员工信息';
+  document.getElementById('formSubmitBtn').innerHTML = '&#x2714; 保存修改';
+
+  f.querySelector('[name="name"]').value = emp.name;
+  f.querySelector('[name="position"]').value = emp.position;
+
+  f.querySelectorAll('input[name="skills"]').forEach(cb => {
+    cb.checked = emp.skills.includes(cb.value);
+  });
+
+  f.querySelector('[name="cert_safety_no"]').value = emp.certs.safety.no === '-' ? '' : emp.certs.safety.no;
+  f.querySelector('[name="cert_safety_date"]').value = emp.certs.safety.date;
+  f.querySelector('[name="cert_safety_issuer"]').value = emp.certs.safety.issuer === '-' ? '' : emp.certs.safety.issuer;
+  f.querySelector('[name="cert_env_no"]').value = emp.certs.env.no === '-' ? '' : emp.certs.env.no;
+  f.querySelector('[name="cert_env_date"]').value = emp.certs.env.date;
+  f.querySelector('[name="cert_env_issuer"]').value = emp.certs.env.issuer === '-' ? '' : emp.certs.env.issuer;
+  f.querySelector('[name="cert_audit_no"]').value = emp.certs.audit.no === '-' ? '' : emp.certs.audit.no;
+  f.querySelector('[name="cert_audit_date"]').value = emp.certs.audit.date;
+  f.querySelector('[name="cert_audit_issuer"]').value = emp.certs.audit.issuer === '-' ? '' : emp.certs.audit.issuer;
+
+  openModal('addModal');
+}
+
+async function handleSaveEmployee(e) {
+  e.preventDefault();
+  const f = e.target;
+  const editId = document.getElementById('editId').value;
+  const skills = Array.from(f.querySelectorAll('input[name="skills"]:checked')).map(c => c.value);
+
+  const empData = {
+    name: f.name.value.trim(),
+    position: f.position.value.trim(),
+    skills: skills,
+    certs: {
+      safety: { no: f.cert_safety_no.value.trim() || '-', date: f.cert_safety_date.value || '2025-01-01', issuer: f.cert_safety_issuer.value.trim() || '-' },
+      env:    { no: f.cert_env_no.value.trim() || '-', date: f.cert_env_date.value || '2025-01-01', issuer: f.cert_env_issuer.value.trim() || '-' },
+      audit:  { no: f.cert_audit_no.value.trim() || '-', date: f.cert_audit_date.value || '2025-01-01', issuer: f.cert_audit_issuer.value.trim() || '-' }
+    }
+  };
+
+  try {
+    if (editId) {
+      await dbUpdate(parseInt(editId), empData);
+      const emp = employees.find(e => e.id === parseInt(editId));
+      if (emp) { Object.assign(emp, { name: empData.name, position: empData.position, skills: empData.skills, certs: empData.certs }); }
+      showToast('success', `员工「${empData.name}」信息已同步到云端`);
+    } else {
+      const newEmp = await dbInsert(empData);
+      employees.push(newEmp);
+      showToast('success', `员工「${empData.name}」已添加到云端`);
+    }
+    closeModal('addModal');
+    updateStats();
+    renderTable();
+    updateStatusBar(`\u2601 云端已同步 ${employees.length} 名员工数据`);
+  } catch(err) {
+    showToast('error', err.message);
+  }
+}
+
+// ==================== EXPORT & IMPORT ====================
+function exportData() {
+  let csv = '\uFEFF序号,姓名,岗位,技能资质,安检证书号,安检有效期,安检发证单位,环保证书号,环保有效期,环保发证单位,内审证书号,内审有效期,内审发证单位\n';
+  employees.forEach((emp, i) => {
+    csv += `${i+1},"${emp.name}","${emp.position}","${emp.skills.join('/')}",`;
+    csv += `"${emp.certs.safety.no}",${emp.certs.safety.date},"${emp.certs.safety.issuer}",`;
+    csv += `"${emp.certs.env.no}",${emp.certs.env.date},"${emp.certs.env.issuer}",`;
+    csv += `"${emp.certs.audit.no}",${emp.certs.audit.date},"${emp.certs.audit.issuer}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `员工证书数据_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('success', '数据已导出为 CSV 文件');
+}
+
+function importCSV() {
+  document.getElementById('csvImportInput').click();
+}
+
+async function handleCSVImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const text = e.target.result;
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length < 2) { showToast('error', 'CSV文件格式不正确'); return; }
+      let imported = 0;
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseCSVLine(lines[i]);
+        if (cols.length < 13) continue;
+        const empData = {
+          name: cols[1], position: cols[2], skills: cols[3].split('/').filter(s => s.trim()),
+          certs: {
+            safety: { no: cols[4], date: cols[5], issuer: cols[6] },
+            env:    { no: cols[7], date: cols[8], issuer: cols[9] },
+            audit:  { no: cols[10], date: cols[11], issuer: cols[12] }
+          }
+        };
+        const newEmp = await dbInsert(empData);
+        employees.push(newEmp);
+        imported++;
+      }
+      updateStats();
+      renderTable();
+      updateStatusBar(`\u2601 云端已同步 ${employees.length} 名员工数据`);
+      showToast('success', `成功导入 ${imported} 名员工到云端`);
+    } catch(err) {
+      showToast('error', '导入失败: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQuotes = !inQuotes; continue; }
+    if (ch === ',' && !inQuotes) { result.push(current.trim()); current = ''; continue; }
+    current += ch;
+  }
+  result.push(current.trim());
+  return result;
+}
+
+// ==================== DELETE / RESET ====================
+async function deleteEmployee(empId) {
+  const emp = employees.find(e => e.id === empId);
+  if (!emp) return;
+  if (!confirm(`确定要删除员工「${emp.name}」的所有记录吗？`)) return;
+  try {
+    await dbDelete(empId);
+    localStorage.removeItem(`cert_mgr_files_${empId}`);
+    employees = employees.filter(e => e.id !== empId);
+    updateStats();
+    renderTable();
+    updateStatusBar(`\u2601 云端已同步 ${employees.length} 名员工数据`);
+    showToast('success', `员工「${emp.name}」已从云端删除`);
+  } catch(err) {
+    showToast('error', err.message);
+  }
+}
+
+async function resetToDefault() {
+  if (!confirm('确定要恢复默认数据吗？云端所有员工记录将被清除并重新导入初始数据。')) return;
+  try {
+    // Delete all existing
+    for (const emp of employees) {
+      await dbDelete(emp.id);
+      localStorage.removeItem(`cert_mgr_files_${emp.id}`);
+    }
+    // Re-seed
+    await seedIfEmpty();
+    employees = await dbFetchAll();
+    employees.forEach(emp => loadLocalFiles(emp));
+    updateStats();
+    renderTable();
+    updateStatusBar(`\u2601 云端已同步 ${employees.length} 名员工数据`);
+    showToast('success', '已恢复为默认数据并同步到云端');
+  } catch(err) {
+    showToast('error', '重置失败: ' + err.message);
+  }
+}
+
+// ==================== MODALS ====================
+function openModal(id) {
+  document.getElementById(id).classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) {
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+  });
+});
+
+// ==================== NOTIFICATIONS PANEL ====================
+function toggleNotifPanel() {
+  document.getElementById('notifPanel').classList.toggle('open');
+}
+document.getElementById('notifBtn').addEventListener('click', toggleNotifPanel);
+
+document.addEventListener('click', e => {
+  const panel = document.getElementById('notifPanel');
+  const btn = document.getElementById('notifBtn');
+  if (panel.classList.contains('open') && !panel.contains(e.target) && !btn.contains(e.target)) {
+    panel.classList.remove('open');
+  }
+});
+
+// ==================== THEME ====================
+const themeBtn = document.getElementById('themeBtn');
+let darkMode = localStorage.getItem('cert_mgr_theme') === 'dark';
+if (darkMode) {
+  document.documentElement.setAttribute('data-theme', 'dark');
+  themeBtn.innerHTML = '&#x2600;';
+}
+themeBtn.addEventListener('click', () => {
+  darkMode = !darkMode;
+  document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : '');
+  themeBtn.innerHTML = darkMode ? '&#x2600;' : '&#x1F319;';
+  localStorage.setItem('cert_mgr_theme', darkMode ? 'dark' : 'light');
+});
+
+// ==================== TOAST ====================
+function showToast(type, message) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span class="toast-icon">${type === 'success' ? '&#x2705;' : '&#x274C;'}</span><span>${message}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(30px)';
+    toast.style.transition = 'all .3s';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// ==================== SEARCH & FILTER ====================
+document.getElementById('searchInput').addEventListener('input', renderTable);
+document.getElementById('filterSelect').addEventListener('change', renderTable);
+document.getElementById('sortSelect').addEventListener('change', renderTable);
+
+// ==================== KEYBOARD ====================
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.active').forEach(m => {
+      m.classList.remove('active');
+      document.body.style.overflow = '';
+    });
+    document.getElementById('notifPanel').classList.remove('open');
+  }
+});
+
+// ==================== INIT ====================
+const dateEl = document.getElementById('headerDate');
+if (dateEl) {
+  const y = TODAY.getFullYear(), m = TODAY.getMonth()+1, d = TODAY.getDate();
+  const weekdays = ['日','一','二','三','四','五','六'];
+  dateEl.textContent = `${y}年${m}月${d}日 星期${weekdays[TODAY.getDay()]}`;
+}
+
+// Boot: load from Supabase
+(async function init() {
+  try {
+    employees = await dbFetchAll();
+    if (employees.length === 0) {
+      updateStatusBar('\u2601 首次使用，正在初始化默认数据...');
+      await seedIfEmpty();
+      employees = await dbFetchAll();
+    }
+    // Load local files for each employee
+    employees.forEach(emp => loadLocalFiles(emp));
+    updateStats();
+    renderTable();
+    updateStatusBar(`\u2601 云端已同步 ${employees.length} 名员工数据`);
+  } catch(err) {
+    console.error('Supabase连接失败:', err);
+    updateStatusBar('\u274C 云数据库连接失败，请检查网络');
+    showToast('error', '无法连接云数据库: ' + err.message);
+  }
+})();
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v67327c56f0bb4ef8b305cae61679db8f1769101564043" integrity="sha512-rdcWY47ByXd76cbCFzznIcEaCN71jqkWBBqlwhF1SY7KubdLKZiEGeP7AyieKZlGP9hbY/MhGrwXzJC/HulNyg==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
