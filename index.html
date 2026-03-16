@@ -1148,7 +1148,9 @@ function saveLocalFiles(emp) {
 // ==================== SUPABASE STORAGE API ====================
 function getStoragePath(empId, fileName) {
   // Organize files by employee ID
-  return `employee_${empId}/${Date.now()}_${fileName}`;
+  // Use safe filename (remove special chars, keep Chinese chars)
+  const safeName = fileName.replace(/[^\u4e00-\u9fa5a-zA-Z0-9._-]/g, '_');
+  return `employee_${empId}/${Date.now()}_${safeName}`;
 }
 
 function getPublicUrl(path) {
