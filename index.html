@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>员工上岗证管理系统</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -1039,11 +1039,14 @@ const HEADERS = {
 };
 
 // Initialize Supabase client
-let supabase;
-if (typeof window !== 'undefined' && window.supabase) {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-} else {
-  console.error('Supabase SDK未加载，请检查网络连接');
+var supabase;
+if (typeof window !== 'undefined') {
+  if (window.supabase) {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('Supabase客户端已初始化');
+  } else {
+    console.warn('Supabase SDK未加载');
+  }
 }
 
 // ==================== DATA ====================
