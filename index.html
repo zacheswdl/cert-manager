@@ -1146,30 +1146,24 @@ function saveLocalFiles(emp) {
 }
 
 // ==================== SUPABASE STORAGE API ====================
-function getStoragePath(empId, fileName) {
-  // Organize files by employee ID
-  // Use safe filename (remove special chars, keep Chinese chars)
-  const safeName = fileName.replace(/[^\u4e00-\u9fa5a-zA-Z0-9._-]/g, '_');
-  return `employee_${empId}/${Date.now()}_${safeName}`;
-}
-
-function getPublicUrl(path) {
-  return `${SUPABASE_STORAGE_URL}/object/public/${STORAGE_BUCKET}/${path}`;
-}
+// Files are stored in Supabase Storage, metadata in employee_files table
+const FILES_API = `${SUPABASE_URL}/rest/v1/employee_files`;
 
 async function uploadFileToCloud(empId, file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = async function(e) {
       try {
+        // Generate unique storage path
+        const safeName = file.name.replace(/[^\u4e00-\u9fa5a-zA-Z0-9._-]/g, '_');
+        const storagePath = `files/${empId}/${Date.now()}_${safeName}`;
+
+        console.log('开始上传文件...');
+        console.log('存储路径:', storagePath);
+
+        // First upload file to Supabase Storage
         const base64 = e.target.result.split(',')[1];
-        const path = getStoragePath(empId, file.name);
-
-        console.log('开始上传文件到Supabase Storage...');
-        console.log('Bucket:', STORAGE_BUCKET);
-        console.log('Path:', path);
-
-        const res = await fetch(`${SUPABASE_STORAGE_URL}/object/${STORAGE_BUCKET}/${path}`, {
+        const uploadRes = await fetch(`${SUPABASE_STORAGE_URL}/object/${STORAGE_BUCKET}/${storagePath}`, {
           method: 'POST',
           headers: {
             'apikey': SUPABASE_KEY,
@@ -1180,21 +1174,43 @@ async function uploadFileToCloud(empId, file) {
           body: Uint8Array.from(atob(base64), c => c.charCodeAt(0))
         });
 
-        console.log('上传响应状态:', res.status);
-
-        if (!res.ok) {
-          const errText = await res.text();
-          console.error('上传失败详情:', errText);
-          throw new Error(`上传失败: ${res.status} - ${errText}`);
+        if (!uploadRes.ok) {
+          const errText = await uploadRes.text();
+          console.error('Storage上传失败:', errText);
+          throw new Error(`上传失败: ${uploadRes.status}`);
         }
 
+        // Then save metadata to employee_files table
+        const fileRecord = {
+          employee_id: empId,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          storage_path: storagePath
+        };
+
+        const dbRes = await fetch(FILES_API, {
+          method: 'POST',
+          headers: HEADERS,
+          body: JSON.stringify(fileRecord)
+        });
+
+        if (!dbRes.ok) {
+          const errText = await dbRes.text();
+          console.error('数据库保存失败:', errText);
+          throw new Error(`保存记录失败: ${dbRes.status}`);
+        }
+
+        const dbData = await dbRes.json();
+
         resolve({
+          id: dbData[0]?.id,
           name: file.name,
           size: file.size,
           type: file.type,
           lastModified: new Date(file.lastModified).toLocaleString('zh-CN'),
-          path: path,
-          publicUrl: getPublicUrl(path)
+          storagePath: storagePath,
+          publicUrl: `${SUPABASE_STORAGE_URL}/object/public/${STORAGE_BUCKET}/${storagePath}`
         });
       } catch(err) {
         console.error('上传错误:', err);
@@ -1206,21 +1222,26 @@ async function uploadFileToCloud(empId, file) {
   });
 }
 
-async function deleteFileFromCloud(path) {
+async function deleteFileFromCloud(fileId, storagePath) {
   try {
-    const res = await fetch(`${SUPABASE_STORAGE_URL}/object/${STORAGE_BUCKET}/${path}`, {
+    // Delete from Storage
+    await fetch(`${SUPABASE_STORAGE_URL}/object/${STORAGE_BUCKET}/${storagePath}`, {
       method: 'DELETE',
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`
       }
     });
-    if (!res.ok && res.status !== 404) {
-      throw new Error(`删除失败: ${res.status}`);
-    }
+
+    // Delete from database
+    await fetch(`${FILES_API}?id=eq.${fileId}`, {
+      method: 'DELETE',
+      headers: HEADERS
+    });
+
     return true;
   } catch(err) {
-    console.error('删除云端文件失败:', err);
+    console.error('删除失败:', err);
     return false;
   }
 }
@@ -1548,9 +1569,9 @@ async function deleteFile(empId, fileIdx) {
   const file = emp.files[fileIdx];
   const name = file.name;
 
-  // Delete from cloud storage if it has a path
-  if (file.path) {
-    await deleteFileFromCloud(file.path);
+  // Delete from cloud storage and database if it has storagePath
+  if (file.storagePath && file.id) {
+    await deleteFileFromCloud(file.id, file.storagePath);
   }
 
   emp.files.splice(fileIdx, 1);
