@@ -880,7 +880,7 @@ tbody tr.row-has-expired:hover{
       <input type="file" id="csvImportInput" accept=".csv" style="display:none" onchange="handleCSVImport(this)">
       <button class="btn btn-outline" onclick="exportData()">&#x1F4E5; 导出数据</button>
       <button class="btn btn-outline" onclick="syncFilesFromCloud()" title="从云端同步文件列表" style="color:var(--accent)">&#x1F504; 同步文件</button>
-      <button class="btn btn-outline" onclick="resetToDefault()" title="恢复为初始默认数据" style="color:var(--danger)">&#x21BB; 重置</button>
+      <button class="btn btn-outline" onclick="resetToDefault()" title="需要管理员密码" style="color:var(--danger)">&#x21BB; 重置</button>
       <button class="btn btn-primary" onclick="openAddModal()">&#x2795; 添加员工</button>
     </div>
   </div>
@@ -1030,6 +1030,9 @@ tbody tr.row-has-expired:hover{
 // ==================== SUPABASE CONFIG ====================
 const SUPABASE_URL = 'https://kktfhbarblahyiqwihyh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrdGZoYmFyYmxhaHlpcXdpaHloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzIwMzAsImV4cCI6MjA4NzY0ODAzMH0.u8X6zVO-FUEK0FyllUpe5mhU12ZNXPAPjcac-uEu9nQ';
+
+// Admin password for sensitive operations (reset data)
+const ADMIN_PASSWORD = '1qazxsw2';
 
 // Load Supabase SDK and initialize client
 (function() {
@@ -1909,6 +1912,15 @@ async function deleteEmployee(empId) {
 }
 
 async function resetToDefault() {
+  // First, ask for admin password
+  const password = prompt('此操作将清除所有数据，请输入管理员密码：');
+  if (password !== ADMIN_PASSWORD) {
+    if (password !== null) {
+      showToast('error', '密码错误，无法执行重置操作');
+    }
+    return;
+  }
+  
   if (!confirm('确定要恢复默认数据吗？云端所有员工记录将被清除并重新导入初始数据。')) return;
   try {
     // Delete all existing
