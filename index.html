@@ -1209,21 +1209,6 @@ async function deleteFileFromCloud(fileId, storagePath) {
     return false;
   }
 }
-      }
-    });
-
-    // Delete from database
-    await fetch(`${FILES_API}?id=eq.${fileId}`, {
-      method: 'DELETE',
-      headers: HEADERS
-    });
-
-    return true;
-  } catch(err) {
-    console.error('删除失败:', err);
-    return false;
-  }
-}
 
 function updateStatusBar(msg) {
   const info = document.getElementById('storageInfo');
