@@ -1025,14 +1025,22 @@ tbody tr.row-has-expired:hover{
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
 // ==================== SUPABASE CONFIG ====================
 const SUPABASE_URL = 'https://kktfhbarblahyiqwihyh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrdGZoYmFyYmxhaHlpcXdpaHloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzIwMzAsImV4cCI6MjA4NzY0ODAzMH0.u8X6zVO-FUEK0FyllUpe5mhU12ZNXPAPjcac-uEu9nQ';
 
-// Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Load Supabase SDK and initialize client
+(function() {
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+  script.onload = function() {
+    window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('Supabase client initialized');
+  };
+  document.head.appendChild(script);
+})();
 
 const API = `${SUPABASE_URL}/rest/v1/employees`;
 const FILES_API = `${SUPABASE_URL}/rest/v1/employee_files`;
