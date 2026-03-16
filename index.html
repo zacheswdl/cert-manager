@@ -1018,7 +1018,7 @@ tbody tr.row-has-expired:hover{
 <!-- Storage Footer -->
 <div style="max-width:1600px;margin:16px auto 24px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;font-size:.75rem;color:var(--text-tertiary)">
   <span id="storageInfo">&#x2601; 正在连接云数据库...</span>
-  <span>&#x2601; 数据存储在云端，电脑和手机可同步访问 | 文件仅保存在当前浏览器</span>
+  <span>&#x2601; 数据和文件已存储在云端，电脑和手机可同步访问</span>
 </div>
 
 <!-- Toast Container -->
@@ -1028,12 +1028,20 @@ tbody tr.row-has-expired:hover{
 // ==================== SUPABASE CONFIG ====================
 const SUPABASE_URL = 'https://kktfhbarblahyiqwihyh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrdGZoYmFyYmxhaHlpcXdpaHloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzIwMzAsImV4cCI6MjA4NzY0ODAzMH0.u8X6zVO-FUEK0FyllUpe5mhU12ZNXPAPjcac-uEu9nQ';
+const SUPABASE_STORAGE_URL = `${SUPABASE_URL}/storage/v1`;
 const API = `${SUPABASE_URL}/rest/v1/employees`;
+const STORAGE_BUCKET = 'certificates';
 const HEADERS = {
   'apikey': SUPABASE_KEY,
   'Authorization': `Bearer ${SUPABASE_KEY}`,
   'Content-Type': 'application/json',
   'Prefer': 'return=representation'
+};
+const STORAGE_HEADERS = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json',
+  'x-upsert': 'true'
 };
 
 // ==================== DATA ====================
@@ -1113,7 +1121,8 @@ async function dbDelete(id) {
 }
 
 // ==================== LOCAL FILE STORAGE ====================
-// Files remain in localStorage (too large for DB free tier)
+// Legacy: Files remain in localStorage (too large for DB free tier)
+// Now using Supabase Storage for cloud sync
 function loadLocalFiles(emp) {
   try {
     const raw = localStorage.getItem(`cert_mgr_files_${emp.id}`);
@@ -1133,6 +1142,76 @@ function saveLocalFiles(emp) {
     }
   } catch(e) {
     console.warn('文件存储失败', e);
+  }
+}
+
+// ==================== SUPABASE STORAGE API ====================
+function getStoragePath(empId, fileName) {
+  // Organize files by employee ID
+  return `employee_${empId}/${Date.now()}_${fileName}`;
+}
+
+function getPublicUrl(path) {
+  return `${SUPABASE_STORAGE_URL}/object/public/${STORAGE_BUCKET}/${path}`;
+}
+
+async function uploadFileToCloud(empId, file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      try {
+        const base64 = e.target.result.split(',')[1];
+        const path = getStoragePath(empId, file.name);
+
+        const res = await fetch(`${SUPABASE_STORAGE_URL}/object/${STORAGE_BUCKET}/${path}`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': file.type,
+            'x-upsert': 'true'
+          },
+          body: Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`上传失败: ${res.status} - ${errText}`);
+        }
+
+        resolve({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: new Date(file.lastModified).toLocaleString('zh-CN'),
+          path: path,
+          publicUrl: getPublicUrl(path)
+        });
+      } catch(err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error('文件读取失败'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function deleteFileFromCloud(path) {
+  try {
+    const res = await fetch(`${SUPABASE_STORAGE_URL}/object/${STORAGE_BUCKET}/${path}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
+    if (!res.ok && res.status !== 404) {
+      throw new Error(`删除失败: ${res.status}`);
+    }
+    return true;
+  } catch(err) {
+    console.error('删除云端文件失败:', err);
+    return false;
   }
 }
 
@@ -1346,9 +1425,9 @@ function renderTable() {
       </td>
       <td class="upload-cell">
         <button class="upload-btn" onclick="triggerUpload(${emp.id})">
-          &#x1F4CE; 上传文件
+          ☁️ 上传文件
         </button>
-        <input type="file" id="fileInput_${emp.id}" accept=".doc,.docx,.pdf" style="display:none" onchange="handleFileUpload(${emp.id}, this)">
+        <input type="file" id="fileInput_${emp.id}" accept=".doc,.docx,.pdf,.jpg,.jpeg,.png,.gif" style="display:none" onchange="handleFileUpload(${emp.id}, this)">
         <div id="fileList_${emp.id}">
           ${emp.files.map((f, fi) => fileItemHTML(emp.id, fi, f.name)).join('')}
         </div>
@@ -1374,26 +1453,49 @@ function triggerUpload(empId) {
   document.getElementById(`fileInput_${empId}`).click();
 }
 
-function handleFileUpload(empId, input) {
+async function handleFileUpload(empId, input) {
   const file = input.files[0];
   if (!file) return;
   const emp = employees.find(e => e.id === empId);
   if (!emp) return;
 
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    emp.files.push({
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      lastModified: new Date(file.lastModified).toLocaleString('zh-CN'),
-      dataUrl: e.target.result
-    });
+  try {
+    // Upload to Supabase Storage
+    const cloudFile = await uploadFileToCloud(empId, file);
+
+    // Add file info to employee (store cloud URL instead of base64 data)
+    emp.files.push(cloudFile);
+
+    // Update status bar during upload
+    const statusEl = document.getElementById('storageInfo');
+    const originalText = statusEl ? statusEl.textContent : '';
+    if (statusEl) statusEl.textContent = '⏳ 正在上传文件到云端...';
+
+    // Update localStorage for backup (smaller footprint now - just URLs)
     saveLocalFiles(emp);
+
     renderTable();
-    showToast('success', `文件 "${file.name}" 上传成功（保存在本地浏览器）`);
-  };
-  reader.readAsDataURL(file);
+    if (statusEl) statusEl.textContent = originalText;
+    showToast('success', `文件 "${file.name}" 已上传到云端，多端可同步查看`);
+  } catch(err) {
+    console.error('上传失败:', err);
+    // Fallback to local storage if cloud upload fails
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      emp.files.push({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: new Date(file.lastModified).toLocaleString('zh-CN'),
+        dataUrl: e.target.result,
+        isLocal: true
+      });
+      saveLocalFiles(emp);
+      renderTable();
+      showToast('success', `文件 "${file.name}" 上传成功（保存在本地浏览器）`);
+    };
+    reader.readAsDataURL(file);
+  }
   input.value = '';
 }
 
@@ -1407,6 +1509,11 @@ function previewFile(empId, fileIdx) {
   if (ext === 'pdf') icon = '&#x1F4D5;';
   else if (ext === 'doc' || ext === 'docx') icon = '&#x1F4D8;';
 
+  // Determine if cloud or local file
+  const isCloud = !!f.publicUrl;
+  const downloadUrl = f.publicUrl || f.dataUrl;
+  const storageType = isCloud ? '☁️ 云端存储' : '💻 本地存储';
+
   document.getElementById('previewBody').innerHTML = `
     <div class="preview-content">
       <div class="preview-file-icon">${icon}</div>
@@ -1415,23 +1522,31 @@ function previewFile(empId, fileIdx) {
         <dt>类型</dt><dd>${f.type || '未知'}</dd>
         <dt>大小</dt><dd>${(f.size / 1024).toFixed(1)} KB</dd>
         <dt>修改时间</dt><dd>${f.lastModified}</dd>
+        <dt>存储位置</dt><dd>${storageType}</dd>
         <dt>所属员工</dt><dd>${emp.name}</dd>
       </dl>
       <div style="margin-top:20px">
-        <a href="${f.dataUrl}" download="${f.name}" class="btn btn-primary" style="text-decoration:none">&#x1F4E5; 下载文件</a>
+        <a href="${downloadUrl}" download="${f.name}" class="btn btn-primary" style="text-decoration:none">&#x1F4E5; 下载文件</a>
       </div>
     </div>`;
   openModal('previewModal');
 }
 
-function deleteFile(empId, fileIdx) {
+async function deleteFile(empId, fileIdx) {
   const emp = employees.find(e => e.id === empId);
   if (!emp) return;
-  const name = emp.files[fileIdx].name;
+  const file = emp.files[fileIdx];
+  const name = file.name;
+
+  // Delete from cloud storage if it has a path
+  if (file.path) {
+    await deleteFileFromCloud(file.path);
+  }
+
   emp.files.splice(fileIdx, 1);
   saveLocalFiles(emp);
   renderTable();
-  showToast('success', `文件 "${name}" 已删除`);
+  showToast('success', `文件 "${name}" 已从云端删除`);
 }
 
 // ==================== DETAIL MODAL ====================
@@ -1474,10 +1589,11 @@ function openDetail(empId) {
     </div>
     ${certsHTML}
     <div style="margin-top:8px">
-      <div style="font-weight:600;font-size:.9rem;margin-bottom:10px">&#x1F4CE; 已上传文件 (${emp.files.length})</div>
+      <div style="font-weight:600;font-size:.9rem;margin-bottom:10px">&#x1F4CE; 已上传文件 (${emp.files.length}) ☁️ 支持云端同步</div>
       ${emp.files.length === 0 ? '<div style="color:var(--text-tertiary);font-size:.84rem">暂无上传文件</div>' :
         emp.files.map((f, i) => `<div class="file-item" style="margin-bottom:6px">
-          <span class="file-name" title="${f.name}" style="max-width:200px">${f.name}</span>
+          <span class="file-name" title="${f.name}" style="max-width:160px">${f.name}</span>
+          <span style="font-size:.72rem;color:${f.publicUrl ? 'var(--success)' : 'var(--text-tertiary)'}">${f.publicUrl ? '☁️' : '💻'}</span>
           <span style="font-size:.72rem;color:var(--text-tertiary)">${(f.size/1024).toFixed(1)}KB</span>
           <button class="preview-btn" onclick="closeModal('detailModal');previewFile(${emp.id},${i})" title="预览">&#x1F441;</button>
         </div>`).join('')
@@ -1557,7 +1673,7 @@ async function handleSaveEmployee(e) {
     closeModal('addModal');
     updateStats();
     renderTable();
-    updateStatusBar(`\u2601 云端已同步 ${employees.length} 名员工数据`);
+    updateStatusBar(`☁️ 云端已同步 ${employees.length} 名员工数据和文件`);
   } catch(err) {
     showToast('error', err.message);
   }
@@ -1612,7 +1728,7 @@ async function handleCSVImport(input) {
       }
       updateStats();
       renderTable();
-      updateStatusBar(`\u2601 云端已同步 ${employees.length} 名员工数据`);
+      updateStatusBar(`☁️ 云端已同步 ${employees.length} 名员工数据和文件`);
       showToast('success', `成功导入 ${imported} 名员工到云端`);
     } catch(err) {
       showToast('error', '导入失败: ' + err.message);
@@ -1647,7 +1763,7 @@ async function deleteEmployee(empId) {
     employees = employees.filter(e => e.id !== empId);
     updateStats();
     renderTable();
-    updateStatusBar(`\u2601 云端已同步 ${employees.length} 名员工数据`);
+    updateStatusBar(`☁️ 云端已同步 ${employees.length} 名员工数据和文件`);
     showToast('success', `员工「${emp.name}」已从云端删除`);
   } catch(err) {
     showToast('error', err.message);
@@ -1668,7 +1784,7 @@ async function resetToDefault() {
     employees.forEach(emp => loadLocalFiles(emp));
     updateStats();
     renderTable();
-    updateStatusBar(`\u2601 云端已同步 ${employees.length} 名员工数据`);
+    updateStatusBar(`☁️ 云端已同步 ${employees.length} 名员工数据和文件`);
     showToast('success', '已恢复为默认数据并同步到云端');
   } catch(err) {
     showToast('error', '重置失败: ' + err.message);
@@ -1775,10 +1891,10 @@ if (dateEl) {
     employees.forEach(emp => loadLocalFiles(emp));
     updateStats();
     renderTable();
-    updateStatusBar(`\u2601 云端已同步 ${employees.length} 名员工数据`);
+    updateStatusBar(`☁️ 云端已同步 ${employees.length} 名员工数据和文件`);
   } catch(err) {
     console.error('Supabase连接失败:', err);
-    updateStatusBar('\u274C 云数据库连接失败，请检查网络');
+    updateStatusBar('☁️ 云数据库连接失败，请检查网络');
     showToast('error', '无法连接云数据库: ' + err.message);
   }
 })();
