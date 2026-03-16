@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>员工上岗证管理系统</title>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -1029,6 +1028,7 @@ tbody tr.row-has-expired:hover{
 // ==================== SUPABASE CONFIG ====================
 const SUPABASE_URL = 'https://kktfhbarblahyiqwihyh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrdGZoYmFyYmxhaHlpcXdpaHloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzIwMzAsImV4cCI6MjA4NzY0ODAzMH0.u8X6zVO-FUEK0FyllUpe5mhU12ZNXPAPjcac-uEu9nQ';
+const SUPABASE_STORAGE_URL = `${SUPABASE_URL}/storage/v1`;
 const API = `${SUPABASE_URL}/rest/v1/employees`;
 const STORAGE_BUCKET = 'certificates';
 const HEADERS = {
@@ -1037,17 +1037,6 @@ const HEADERS = {
   'Content-Type': 'application/json',
   'Prefer': 'return=representation'
 };
-
-// Initialize Supabase client
-var supabase;
-if (typeof window !== 'undefined') {
-  if (window.supabase) {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    console.log('Supabase客户端已初始化');
-  } else {
-    console.warn('Supabase SDK未加载');
-  }
-}
 
 // ==================== DATA ====================
 const TODAY = new Date();
@@ -1151,61 +1140,84 @@ function saveLocalFiles(emp) {
 }
 
 // ==================== SUPABASE STORAGE API ====================
-// Using Supabase JS SDK for file operations
+// Using fetch API for file operations
 
 async function uploadFileToCloud(empId, file) {
-  try {
-    // Generate unique storage path
-    const safeName = file.name.replace(/[^\u4e00-\u9fa5a-zA-Z0-9._-]/g, '_');
-    const fileName = `files/${empId}/${Date.now()}_${safeName}`;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      try {
+        // Generate unique storage path
+        const safeName = file.name.replace(/[^\u4e00-\u9fa5a-zA-Z0-9._-]/g, '_');
+        const fileName = `files/${empId}/${Date.now()}_${safeName}`;
 
-    console.log('开始上传文件到Supabase Storage...');
-    console.log('文件名:', fileName);
+        console.log('开始上传文件到Supabase Storage...');
 
-    // Upload file using Supabase SDK
-    const { error } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(fileName, file);
+        // Convert to binary
+        const base64 = e.target.result.split(',')[1];
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
 
-    if (error) {
-      console.error('上传失败:', error);
-      throw new Error(error.message);
-    }
+        // Upload to Supabase Storage
+        const res = await fetch(`${SUPABASE_STORAGE_URL}/object/${STORAGE_BUCKET}/${fileName}`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': file.type,
+            'x-upsert': 'true'
+          },
+          body: bytes
+        });
 
-    console.log('上传成功!');
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error('上传失败:', res.status, errText);
+          throw new Error(`上传失败: ${res.status}`);
+        }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from(STORAGE_BUCKET)
-      .getPublicUrl(fileName);
+        console.log('上传成功!');
 
-    console.log('公开链接:', urlData.publicUrl);
+        const publicUrl = `${SUPABASE_STORAGE_URL}/object/public/${STORAGE_BUCKET}/${fileName}`;
+        console.log('公开链接:', publicUrl);
 
-    return {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      lastModified: new Date(file.lastModified).toLocaleString('zh-CN'),
-      storagePath: fileName,
-      publicUrl: urlData.publicUrl
+        resolve({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: new Date(file.lastModified).toLocaleString('zh-CN'),
+          storagePath: fileName,
+          publicUrl: publicUrl
+        });
+      } catch(err) {
+        console.error('上传错误:', err);
+        reject(err);
+      }
     };
-  } catch(err) {
-    console.error('上传错误:', err);
-    throw err;
-  }
+    reader.onerror = () => reject(new Error('文件读取失败'));
+    reader.readAsDataURL(file);
+  });
 }
 
 async function deleteFileFromCloud(fileId, storagePath) {
   try {
-    // Delete from Storage using Supabase SDK
-    const { error } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .remove([storagePath]);
+    // Delete from Supabase Storage
+    const res = await fetch(`${SUPABASE_STORAGE_URL}/object/${STORAGE_BUCKET}/${storagePath}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
 
-    if (error) {
-      console.error('删除失败:', error);
+    if (!res.ok && res.status !== 404) {
+      console.error('删除失败:', res.status);
     }
 
+    console.log('文件已删除');
     return true;
   } catch(err) {
     console.error('删除错误:', err);
@@ -1878,19 +1890,6 @@ if (dateEl) {
 
 // Boot: load from Supabase
 (async function init() {
-  // Check if Supabase SDK is loaded
-  if (!supabase) {
-    console.error('Supabase SDK未加载');
-    updateStatusBar('⚠️ 正在加载云数据库...');
-    // Wait for SDK to load
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    if (!supabase) {
-      updateStatusBar('⚠️ 云数据库加载失败，请刷新页面');
-      showToast('error', '无法加载Supabase SDK，请检查网络后刷新页面');
-      return;
-    }
-  }
-
   try {
     employees = await dbFetchAll();
     if (employees.length === 0) {
