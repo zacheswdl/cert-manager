@@ -879,6 +879,7 @@ tbody tr.row-has-expired:hover{
       <button class="btn btn-outline" onclick="importCSV()" title="从CSV导入数据">&#x1F4C2; 导入数据</button>
       <input type="file" id="csvImportInput" accept=".csv" style="display:none" onchange="handleCSVImport(this)">
       <button class="btn btn-outline" onclick="exportData()">&#x1F4E5; 导出数据</button>
+      <button class="btn btn-outline" onclick="syncFilesFromCloud()" title="从云端同步文件列表" style="color:var(--accent)">&#x1F504; 同步文件</button>
       <button class="btn btn-outline" onclick="resetToDefault()" title="恢复为初始默认数据" style="color:var(--danger)">&#x21BB; 重置</button>
       <button class="btn btn-primary" onclick="openAddModal()">&#x2795; 添加员工</button>
     </div>
@@ -1024,12 +1025,17 @@ tbody tr.row-has-expired:hover{
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ==================== SUPABASE CONFIG ====================
 const SUPABASE_URL = 'https://kktfhbarblahyiqwihyh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrdGZoYmFyYmxhaHlpcXdpaHloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzIwMzAsImV4cCI6MjA4NzY0ODAzMH0.u8X6zVO-FUEK0FyllUpe5mhU12ZNXPAPjcac-uEu9nQ';
-const SUPABASE_STORAGE_URL = `${SUPABASE_URL}/storage/v1`;
+
+// Initialize Supabase client
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 const API = `${SUPABASE_URL}/rest/v1/employees`;
+const FILES_API = `${SUPABASE_URL}/rest/v1/employee_files`;
 const STORAGE_BUCKET = 'certificates';
 const HEADERS = {
   'apikey': SUPABASE_KEY,
@@ -1140,87 +1146,189 @@ function saveLocalFiles(emp) {
 }
 
 // ==================== SUPABASE STORAGE API ====================
-// Using fetch API for file operations
+// Using Supabase JS SDK for file operations
 
 async function uploadFileToCloud(empId, file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-      try {
-        // Generate unique storage path
-        const safeName = file.name.replace(/[^\u4e00-\u9fa5a-zA-Z0-9._-]/g, '_');
-        const fileName = `files/${empId}/${Date.now()}_${safeName}`;
+  try {
+    // Check if Supabase SDK is loaded
+    if (!window.supabase) {
+      throw new Error('Supabase SDK 未加载，请检查网络连接');
+    }
 
-        console.log('开始上传文件到Supabase Storage...');
+    // Generate unique storage path
+    const safeName = file.name.replace(/[^\u4e00-\u9fa5a-zA-Z0-9._-]/g, '_');
+    const fileName = `files/${empId}/${Date.now()}_${safeName}`;
 
-        // Convert to binary
-        const base64 = e.target.result.split(',')[1];
-        const binaryString = atob(base64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
+    console.log('开始上传文件到Supabase Storage...');
+    console.log('Bucket:', STORAGE_BUCKET);
+    console.log('文件:', file.name, file.type, file.size);
 
-        // Upload to Supabase Storage
-        const res = await fetch(`${SUPABASE_STORAGE_URL}/object/${STORAGE_BUCKET}/${fileName}`, {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`,
-            'Content-Type': file.type,
-            'x-upsert': 'true'
-          },
-          body: bytes
-        });
+    // Upload to Supabase Storage using SDK
+    const { data, error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: file.type
+      });
 
-        if (!res.ok) {
-          const errText = await res.text();
-          console.error('上传失败:', res.status, errText);
-          throw new Error(`上传失败: ${res.status}`);
-        }
+    if (error) {
+      console.error('Supabase上传错误:', error);
+      console.error('错误代码:', error.statusCode);
+      console.error('错误详情:', error.error || error.message);
+      throw new Error(`上传失败: ${error.message}`);
+    }
 
-        console.log('上传成功!');
+    console.log('上传成功!', data);
 
-        const publicUrl = `${SUPABASE_STORAGE_URL}/object/public/${STORAGE_BUCKET}/${fileName}`;
-        console.log('公开链接:', publicUrl);
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from(STORAGE_BUCKET)
+      .getPublicUrl(fileName);
 
-        resolve({
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          lastModified: new Date(file.lastModified).toLocaleString('zh-CN'),
-          storagePath: fileName,
-          publicUrl: publicUrl
-        });
-      } catch(err) {
-        console.error('上传错误:', err);
-        reject(err);
-      }
+    const publicUrl = urlData.publicUrl;
+    console.log('公开链接:', publicUrl);
+
+    return {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      lastModified: new Date(file.lastModified).toLocaleString('zh-CN'),
+      storagePath: fileName,
+      publicUrl: publicUrl
     };
-    reader.onerror = () => reject(new Error('文件读取失败'));
-    reader.readAsDataURL(file);
-  });
+  } catch(err) {
+    console.error('上传错误:', err);
+    throw err;
+  }
 }
 
 async function deleteFileFromCloud(fileId, storagePath) {
   try {
-    // Delete from Supabase Storage
-    const res = await fetch(`${SUPABASE_STORAGE_URL}/object/${STORAGE_BUCKET}/${storagePath}`, {
-      method: 'DELETE',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
-      }
-    });
+    // Delete from Supabase Storage using SDK
+    const { error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .remove([storagePath]);
 
-    if (!res.ok && res.status !== 404) {
-      console.error('删除失败:', res.status);
+    if (error) {
+      console.error('删除失败:', error);
+    } else {
+      console.log('文件已从云端删除');
     }
 
-    console.log('文件已删除');
-    return true;
+    return !error;
   } catch(err) {
     console.error('删除错误:', err);
+    return false;
+  }
+}
+
+// ==================== FILE METADATA IN DATABASE ====================
+
+// Save file metadata to employee_files table
+async function saveFileMetadata(empId, fileInfo) {
+  try {
+    console.log('正在保存文件元数据到数据库...', { empId, fileInfo });
+    
+    const res = await fetch(FILES_API, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({
+        employee_id: empId,
+        name: fileInfo.name,
+        size: fileInfo.size,
+        type: fileInfo.type,
+        storage_path: fileInfo.storagePath
+      })
+    });
+    
+    const status = res.status;
+    const statusText = res.statusText;
+    console.log('POST 响应状态:', status, statusText);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('保存文件信息失败:', status, errorText);
+      throw new Error(`保存文件信息失败: ${status} - ${errorText}`);
+    }
+    
+    const data = await res.json();
+    console.log('文件元数据已保存到数据库:', data);
+    return data[0];
+  } catch(err) {
+    console.error('保存文件元数据错误:', err);
+    alert('保存文件元数据失败: ' + err.message);
+    return null;
+  }
+}
+
+// Sync all files from cloud for all employees
+async function syncFilesFromCloud() {
+  try {
+    updateStatusBar('⏳ 正在从云端同步文件...');
+    showToast('info', '正在从云端同步文件...');
+    
+    let totalFiles = 0;
+    
+    for (const emp of employees) {
+      const cloudFiles = await loadFilesFromCloud(emp.id);
+      if (cloudFiles.length > 0) {
+        emp.files = cloudFiles;
+        saveLocalFiles(emp);
+        totalFiles += cloudFiles.length;
+      }
+    }
+    
+    renderTable();
+    updateStatusBar(`☁️ 已同步 ${totalFiles} 个文件`);
+    showToast('success', `已从云端同步 ${totalFiles} 个文件`);
+  } catch(err) {
+    console.error('同步文件失败:', err);
+    updateStatusBar('⚠️ 文件同步失败');
+    showToast('error', '文件同步失败: ' + err.message);
+  }
+}
+
+// Load files from cloud database for an employee
+async function loadFilesFromCloud(empId) {
+  try {
+    const res = await fetch(`${FILES_API}?employee_id=eq.${empId}&select=*`, {
+      headers: HEADERS
+    });
+    if (!res.ok) throw new Error(`加载文件列表失败: ${res.status}`);
+    const rows = await res.json();
+    console.log('从云端加载文件列表:', rows);
+    
+    // Convert to file objects with public URLs
+    return rows.map(row => {
+      // Get public URL from storage path
+      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${row.storage_path}`;
+      return {
+        id: row.id,
+        name: row.name,
+        size: row.size,
+        type: row.type,
+        storagePath: row.storage_path,
+        publicUrl: publicUrl,
+        lastModified: row.created_at ? new Date(row.created_at).toLocaleString('zh-CN') : '-'
+      };
+    });
+  } catch(err) {
+    console.error('加载云端文件错误:', err);
+    return [];
+  }
+}
+
+// Delete file metadata from database
+async function deleteFileMetadata(fileId) {
+  try {
+    const res = await fetch(`${FILES_API}?id=eq.${fileId}`, {
+      method: 'DELETE',
+      headers: HEADERS
+    });
+    return res.ok;
+  } catch(err) {
+    console.error('删除文件元数据错误:', err);
     return false;
   }
 }
@@ -1469,19 +1577,25 @@ async function handleFileUpload(empId, input) {
   const emp = employees.find(e => e.id === empId);
   if (!emp) return;
 
+  // Update status bar during upload
+  const statusEl = document.getElementById('storageInfo');
+  const originalText = statusEl ? statusEl.textContent : '';
+  if (statusEl) statusEl.textContent = '⏳ 正在上传文件到云端...';
+
   try {
     // Upload to Supabase Storage
     const cloudFile = await uploadFileToCloud(empId, file);
 
+    // Save file metadata to cloud database
+    const savedFile = await saveFileMetadata(empId, cloudFile);
+    if (savedFile) {
+      cloudFile.id = savedFile.id;
+    }
+
     // Add file info to employee (store cloud URL instead of base64 data)
     emp.files.push(cloudFile);
 
-    // Update status bar during upload
-    const statusEl = document.getElementById('storageInfo');
-    const originalText = statusEl ? statusEl.textContent : '';
-    if (statusEl) statusEl.textContent = '⏳ 正在上传文件到云端...';
-
-    // Update localStorage for backup (smaller footprint now - just URLs)
+    // Update localStorage for backup
     saveLocalFiles(emp);
 
     renderTable();
@@ -1506,6 +1620,7 @@ async function handleFileUpload(empId, input) {
     };
     reader.readAsDataURL(file);
   }
+  if (statusEl) statusEl.textContent = originalText;
   input.value = '';
 }
 
@@ -1548,9 +1663,14 @@ async function deleteFile(empId, fileIdx) {
   const file = emp.files[fileIdx];
   const name = file.name;
 
-  // Delete from cloud storage and database if it has storagePath
-  if (file.storagePath && file.id) {
+  // Delete from cloud storage
+  if (file.storagePath) {
     await deleteFileFromCloud(file.id, file.storagePath);
+  }
+
+  // Delete metadata from database
+  if (file.id) {
+    await deleteFileMetadata(file.id);
   }
 
   emp.files.splice(fileIdx, 1);
@@ -1897,8 +2017,21 @@ if (dateEl) {
       await seedIfEmpty();
       employees = await dbFetchAll();
     }
-    // Load local files for each employee
-    employees.forEach(emp => loadLocalFiles(emp));
+    
+    // Load files from cloud database for each employee
+    for (const emp of employees) {
+      // First try to load from cloud
+      const cloudFiles = await loadFilesFromCloud(emp.id);
+      if (cloudFiles.length > 0) {
+        emp.files = cloudFiles;
+        // Also save to localStorage as backup
+        saveLocalFiles(emp);
+      } else {
+        // Fallback to local files
+        loadLocalFiles(emp);
+      }
+    }
+    
     updateStats();
     renderTable();
     updateStatusBar(`☁️ 云端已同步 ${employees.length} 名员工数据和文件`);
