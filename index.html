@@ -1163,6 +1163,10 @@ async function uploadFileToCloud(empId, file) {
         const base64 = e.target.result.split(',')[1];
         const path = getStoragePath(empId, file.name);
 
+        console.log('开始上传文件到Supabase Storage...');
+        console.log('Bucket:', STORAGE_BUCKET);
+        console.log('Path:', path);
+
         const res = await fetch(`${SUPABASE_STORAGE_URL}/object/${STORAGE_BUCKET}/${path}`, {
           method: 'POST',
           headers: {
@@ -1174,8 +1178,11 @@ async function uploadFileToCloud(empId, file) {
           body: Uint8Array.from(atob(base64), c => c.charCodeAt(0))
         });
 
+        console.log('上传响应状态:', res.status);
+
         if (!res.ok) {
           const errText = await res.text();
+          console.error('上传失败详情:', errText);
           throw new Error(`上传失败: ${res.status} - ${errText}`);
         }
 
@@ -1188,6 +1195,7 @@ async function uploadFileToCloud(empId, file) {
           publicUrl: getPublicUrl(path)
         });
       } catch(err) {
+        console.error('上传错误:', err);
         reject(err);
       }
     };
@@ -1480,6 +1488,7 @@ async function handleFileUpload(empId, input) {
   } catch(err) {
     console.error('上传失败:', err);
     // Fallback to local storage if cloud upload fails
+    showToast('error', `云端上传失败: ${err.message}，已保存到本地`);
     const reader = new FileReader();
     reader.onload = function(e) {
       emp.files.push({
@@ -1492,7 +1501,6 @@ async function handleFileUpload(empId, input) {
       });
       saveLocalFiles(emp);
       renderTable();
-      showToast('success', `文件 "${file.name}" 上传成功（保存在本地浏览器）`);
     };
     reader.readAsDataURL(file);
   }
