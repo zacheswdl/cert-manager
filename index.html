@@ -795,9 +795,108 @@ tbody tr.row-has-expired:hover{
 }
 .empty-state .empty-icon{font-size:2.5rem;margin-bottom:12px;opacity:.5}
 .empty-state p{font-size:.92rem}
+
+/* ========== Login Screen ========== */
+.login-overlay{
+  position:fixed;inset:0;
+  background:linear-gradient(135deg,#1a1d2e 0%,#2a2e44 50%,#1a1d2e 100%);
+  z-index:9999;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+}
+.login-overlay.hidden{display:none}
+.login-box{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-xl);
+  padding:40px;
+  width:100%;
+  max-width:400px;
+  box-shadow:var(--shadow-xl);
+  text-align:center;
+}
+.login-logo{
+  width:64px;height:64px;
+  background:linear-gradient(135deg,#3b5bdb,#5c7cfa);
+  border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 20px;
+  font-size:2rem;
+}
+.login-title{
+  font-size:1.4rem;font-weight:700;margin-bottom:8px;
+}
+.login-subtitle{
+  color:var(--text-tertiary);font-size:.88rem;margin-bottom:28px;
+}
+.login-form{display:flex;flex-direction:column;gap:16px}
+.login-input{
+  height:48px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:0 16px;
+  background:var(--bg-tertiary);
+  color:var(--text-primary);
+  font-size:1rem;
+  font-family:inherit;
+  outline:none;
+  transition:var(--transition);
+}
+.login-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,91,219,.15)}
+.login-btn{
+  height:48px;
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  border-radius:var(--radius);
+  font-size:1rem;font-weight:600;
+  cursor:pointer;
+  transition:var(--transition);
+  margin-top:8px;
+}
+.login-btn:hover{background:var(--accent-hover)}
+.login-btn:disabled{opacity:.6;cursor:not-allowed}
+.login-error{
+  color:var(--danger);
+  font-size:.84rem;
+  margin-top:8px;
+  display:none;
+}
+.login-error.show{display:block}
+.login-footer{
+  margin-top:24px;
+  padding-top:20px;
+  border-top:1px solid var(--border);
+  font-size:.78rem;color:var(--text-tertiary);
+}
+
+/* Main content hidden by default */
+.main-content{display:none}
+.main-content.show{display:block}
 </style>
 </head>
 <body>
+
+<!-- Login Screen -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">&#x1F6E1;</div>
+    <div class="login-title">员工上岗证管理系统</div>
+    <div class="login-subtitle">请输入账号密码登录</div>
+    <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
+      <input type="text" class="login-input" id="loginUsername" placeholder="请输入账号" required autocomplete="username">
+      <input type="password" class="login-input" id="loginPassword" placeholder="请输入密码" required autocomplete="current-password">
+      <button type="submit" class="login-btn" id="loginBtn">登 录</button>
+      <div class="login-error" id="loginError"></div>
+    </form>
+    <div class="login-footer">
+      内部系统，请勿随意分享
+    </div>
+  </div>
+</div>
+
+<!-- Main Content (hidden until login) -->
+<div class="main-content" id="mainContent">
 
 <!-- Header -->
 <header class="header">
@@ -812,6 +911,7 @@ tbody tr.row-has-expired:hover{
       <span class="notification-badge" id="notifBadge">0</span>
     </button>
     <button class="header-btn" id="themeBtn" title="切换主题">&#x1F319;</button>
+    <button class="header-btn" id="logoutBtn" title="退出登录" onclick="logout()" style="margin-left:4px">&#x1F6AA;</button>
   </div>
 </header>
 
@@ -1027,12 +1127,71 @@ tbody tr.row-has-expired:hover{
 
 
 <script>
+// ==================== LOGIN CONFIG ====================
+const ADMIN_USERNAME = 'ls001';
+const ADMIN_PASSWORD = '888888';
+let isLoggedIn = localStorage.getItem('cert_mgr_logged_in') === 'true';
+
+// Check login status on page load
+function checkLogin() {
+  if (!isLoggedIn) {
+    document.getElementById('loginOverlay').classList.remove('hidden');
+    document.getElementById('mainContent').classList.remove('show');
+    return false;
+  } else {
+    document.getElementById('loginOverlay').classList.add('hidden');
+    document.getElementById('mainContent').classList.add('show');
+    return true;
+  }
+}
+
+// Handle login
+function handleLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errorEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+
+  btn.disabled = true;
+  btn.textContent = '登录中...';
+  errorEl.classList.remove('show');
+
+  // Simulate login check
+  setTimeout(() => {
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+      isLoggedIn = true;
+      localStorage.setItem('cert_mgr_logged_in', 'true');
+      document.getElementById('loginOverlay').classList.add('hidden');
+      document.getElementById('mainContent').classList.add('show');
+      // Initialize the app after login
+      initApp();
+    } else {
+      errorEl.textContent = '账号或密码错误，请重试';
+      errorEl.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = '登 录';
+    }
+  }, 500);
+}
+
+// Logout function
+function logout() {
+  if (confirm('确定要退出登录吗？')) {
+    isLoggedIn = false;
+    localStorage.removeItem('cert_mgr_logged_in');
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginOverlay').classList.remove('hidden');
+    document.getElementById('mainContent').classList.remove('show');
+  }
+}
+
 // ==================== SUPABASE CONFIG ====================
 const SUPABASE_URL = 'https://kktfhbarblahyiqwihyh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrdGZoYmFyYmxhaHlpcXdpaHloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNzIwMzAsImV4cCI6MjA4NzY0ODAzMH0.u8X6zVO-FUEK0FyllUpe5mhU12ZNXPAPjcac-uEu9nQ';
 
-// Admin password for sensitive operations (reset data)
-const ADMIN_PASSWORD = '1qazxsw2';
+// Admin password for sensitive operations (reset data) - kept for reset function
+const RESET_PASSWORD = '1qazxsw2';
 
 // Load Supabase SDK and initialize client
 (function() {
@@ -1914,7 +2073,7 @@ async function deleteEmployee(empId) {
 async function resetToDefault() {
   // First, ask for admin password
   const password = prompt('此操作将清除所有数据，请输入管理员密码：');
-  if (password !== ADMIN_PASSWORD) {
+  if (password !== RESET_PASSWORD) {
     if (password !== null) {
       showToast('error', '密码错误，无法执行重置操作');
     }
@@ -2028,8 +2187,8 @@ if (dateEl) {
   dateEl.textContent = `${y}年${m}月${d}日 星期${weekdays[TODAY.getDay()]}`;
 }
 
-// Boot: load from Supabase
-(async function init() {
+// Boot: load from Supabase - only after login
+async function initApp() {
   try {
     employees = await dbFetchAll();
     if (employees.length === 0) {
@@ -2037,7 +2196,7 @@ if (dateEl) {
       await seedIfEmpty();
       employees = await dbFetchAll();
     }
-    
+
     // Load files from cloud database for each employee
     for (const emp of employees) {
       // First try to load from cloud
@@ -2051,7 +2210,7 @@ if (dateEl) {
         loadLocalFiles(emp);
       }
     }
-    
+
     updateStats();
     renderTable();
     updateStatusBar(`☁️ 云端已同步 ${employees.length} 名员工数据和文件`);
@@ -2060,7 +2219,12 @@ if (dateEl) {
     updateStatusBar('☁️ 云数据库连接失败，请检查网络');
     showToast('error', '无法连接云数据库: ' + err.message);
   }
-})();
+}
+
+// Check login and init
+if (checkLogin()) {
+  initApp();
+}
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v67327c56f0bb4ef8b305cae61679db8f1769101564043" integrity="sha512-rdcWY47ByXd76cbCFzznIcEaCN71jqkWBBqlwhF1SY7KubdLKZiEGeP7AyieKZlGP9hbY/MhGrwXzJC/HulNyg==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
